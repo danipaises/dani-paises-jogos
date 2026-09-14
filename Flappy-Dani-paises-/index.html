@@ -1,0 +1,691 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dani Fly: Países</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        body {
+            margin: 0; padding: 0; overflow: hidden;
+            background-color: #111;
+            font-family: 'VT323', monospace;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #gameCanvas {
+            display: block; width: 100%; height: 100vh;
+            image-rendering: pixelated;
+        }
+
+        /* --- UI LAYER --- */
+        .ui-layer {
+            position: absolute; inset: 0; pointer-events: none;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            z-index: 20; transition: opacity 0.5s;
+        }
+        
+        .interactive { pointer-events: auto !important; cursor: pointer; }
+        .hidden { opacity: 0; pointer-events: none !important; }
+
+        /* --- ESTILO ARCADE --- */
+        .arcade-card {
+            background: #ded895;
+            border: 4px solid #543847;
+            box-shadow: 8px 8px 0px rgba(0,0,0,0.3);
+            padding: 2rem; text-align: center;
+            border-radius: 4px; image-rendering: pixelated;
+            max-width: 90%;
+        }
+
+        /* --- BOTÕES --- */
+        .btn-base {
+            border: 2px solid #fff;
+            color: white; font-family: 'VT323', monospace; font-size: 1.5rem;
+            padding: 0.5rem 1rem; cursor: pointer;
+            transition: transform 0.1s;
+            text-transform: uppercase; margin-top: 0.5rem;
+            pointer-events: auto; display: block; width: 100%;
+        }
+        .btn-base:active { transform: translateY(4px); box-shadow: none !important; }
+
+        .btn-play { background: #e6602e; box-shadow: 0 4px 0 #9e3d17; }
+        .btn-skin-menu { background: #3b82f6; box-shadow: 0 4px 0 #1d4ed8; }
+        .btn-back { background: #ef4444; box-shadow: 0 4px 0 #b91c1c; }
+        .btn-pause-menu { background: #f59e0b; box-shadow: 0 4px 0 #b45309; }
+
+        .btn-small {
+            background: #e6602e; border: 2px solid #fff;
+            color: white; font-family: 'VT323', monospace; font-size: 1.2rem;
+            padding: 0.2rem 0.5rem; cursor: pointer;
+            box-shadow: 0 3px 0 #9e3d17; pointer-events: auto;
+            margin-bottom: 0.5rem; width: 70px;
+        }
+        .btn-small:active { transform: translateY(3px); box-shadow: 0 0 0; }
+
+        /* --- SKINS --- */
+        .skin-option {
+            display: flex; align-items: center; justify-content: space-between;
+            background: #fff; border: 2px solid #543847;
+            padding: 10px; margin-bottom: 10px; cursor: pointer;
+            transition: all 0.1s;
+        }
+        .skin-option:hover { background: #f0f0f0; }
+        .skin-option.selected {
+            border-color: #e6602e; background: #ffedd5;
+            box-shadow: inset 0 0 0 2px #e6602e;
+        }
+        
+        .bird-preview {
+            width: 30px; height: 30px; border-radius: 50%;
+            border: 2px solid #000;
+        }
+
+        #flash {
+            position: absolute; inset: 0; background: white;
+            opacity: 0; pointer-events: none; z-index: 50; transition: opacity 0.1s;
+        }
+        
+        #seasonLabel {
+            text-shadow: 2px 2px 0 #000;
+            transition: all 0.5s ease-out;
+            opacity: 0; transform: translateY(-10px);
+        }
+        #seasonLabel.visible { opacity: 0.8; transform: translateY(0); }
+
+        /* --- SPLASH SCREEN (RETRO NEON) --- */
+        #splashScreen {
+            background-color: #1a0b2e;
+            background-image: 
+                linear-gradient(rgba(18, 16, 20, 0) 50%, rgba(0, 0, 0, 0.25) 50%), 
+                linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(255, 0, 0, 0.02) 50%, rgba(255, 0, 0, 0.06));
+            background-size: 100% 2px, 3px 100%;
+            z-index: 100;
+            opacity: 1;
+            transition: opacity 0.5s ease-in-out;
+            overflow: hidden;
+            pointer-events: none; /* Automático, sem interação necessária */
+        }
+
+        .retro-grid {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 50%;
+            background: 
+                linear-gradient(transparent 0%, #ff00ff 2%, transparent 3%),
+                linear-gradient(90deg, transparent 0%, rgba(255, 0, 255, 0.3) 1%, transparent 2%);
+            background-size: 100% 40px, 60px 100%;
+            transform: perspective(200px) rotateX(60deg);
+            transform-origin: bottom center;
+            animation: gridMove 1s linear infinite;
+            opacity: 0.3;
+        }
+
+        .splash-content {
+            position: relative; z-index: 10; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; height: 100%; width: 100%;
+        }
+
+        .company-header {
+            font-size: 4rem; line-height: 0.9; font-weight: bold; color: #fff;
+            text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #ff00ff, 0 0 40px #ff00ff;
+            margin-bottom: 2rem; text-align: center;
+            animation: flicker 1.5s infinite alternate;
+        }
+        .store-sub { display: block; font-size: 2.5rem; color: #00ffff; text-shadow: 0 0 10px #00ffff; }
+
+        .intro-logo {
+            width: 70%; max-width: 250px; height: auto; margin-bottom: 2rem;
+            filter: drop-shadow(0 0 15px rgba(255, 255, 255, 0.5));
+            animation: bounceIn 1s cubic-bezier(0.68, -0.55, 0.27, 1.55);
+        }
+
+        /* Backup caso a imagem falhe */
+        .intro-logo-backup {
+            font-size: 6rem; margin-bottom: 2rem;
+            animation: bounceIn 1s; display: none;
+        }
+
+        .credits-container {
+            border: 2px solid #00ffff; padding: 1rem 2rem;
+            background: rgba(0, 0, 0, 0.6);
+            box-shadow: 0 0 15px #00ffff, inset 0 0 15px #00ffff;
+            border-radius: 10px;
+            animation: slideUp 1s ease-out 0.5s backwards;
+        }
+
+        .owner-row { font-size: 1.5rem; color: #facc15; font-weight: bold; text-shadow: 2px 2px 0 #000; margin-bottom: 0.5rem; text-align: center; }
+        .creator-row { font-size: 1.1rem; color: #e5e7eb; text-transform: uppercase; text-align: center; letter-spacing: 1px; }
+
+        @keyframes gridMove { 0% { background-position: 0 0; } 100% { background-position: 0 40px; } }
+        @keyframes bounceIn { 0% { transform: scale(0); opacity: 0; } 60% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
+        @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes flicker { 0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% { text-shadow: 0 0 5px #fff, 0 0 10px #fff, 0 0 20px #ff00ff, 0 0 40px #ff00ff; } 20%, 24%, 55% { text-shadow: none; } }
+
+    </style>
+</head>
+<body>
+
+    <!-- INTRO AUTOMÁTICA -->
+    <div id="splashScreen" class="ui-layer">
+        <div class="retro-grid"></div>
+        <div class="splash-content">
+            <h1 class="company-header">DANI PAÍSES<br><span class="store-sub">STORE WEB</span></h1>
+            
+            <!-- Imagem e Backup -->
+            <img src="1000011034.png" alt="Logo" class="intro-logo" onerror="this.style.display='none'; document.getElementById('logo-backup').style.display='block'">
+            <div id="logo-backup" class="intro-logo-backup">🌍</div>
+            
+            <div class="credits-container">
+                <div class="owner-row">DONO DA EMPRESA DANIEL</div>
+                <div class="creator-row">CRIADOR FUNCIONÁRIO LUCAS</div>
+            </div>
+            <!-- Botão removido para fluxo automático -->
+        </div>
+        <div class="absolute bottom-4 text-xs text-cyan-500 opacity-80">© 2025 Direitos Reservados</div>
+    </div>
+
+    <div id="flash"></div>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="absolute top-0 left-0 w-full p-4 flex flex-col items-center pointer-events-none hidden z-10">
+        <div class="flex justify-between w-full items-start">
+            <div class="w-20"></div> 
+            <div class="flex flex-col items-center">
+                <span id="scoreVal" class="text-6xl text-white drop-shadow-[4px_4px_0_#000] leading-none">0</span>
+                <div id="seasonLabel" class="text-2xl text-white font-bold tracking-widest uppercase visible mt-1">VERÃO ☀</div>
+            </div>
+            <div class="flex flex-col items-end w-20">
+                <button id="btnExit" class="btn-small bg-[#ef4444] shadow-[#b91c1c]">SAIR</button>
+                <button id="btnPause" class="btn-small bg-[#f59e0b] shadow-[#b45309]">PAUSE</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Start Screen -->
+    <div id="startScreen" class="ui-layer hidden interactive">
+        <div class="arcade-card animate-bounce">
+            <h1 class="text-5xl text-[#e6602e] mb-2 drop-shadow-[2px_2px_0_#fff]">DANI FLY<br>PAÍSES</h1>
+            <p class="text-xl text-[#543847]">Voe com seu País!</p>
+            <button id="btnPlay" class="btn-base btn-play">JOGAR</button>
+            <button id="btnSkins" class="btn-base btn-skin-menu">BANDEIRAS 🏳</button>
+        </div>
+    </div>
+
+    <!-- Pause Screen -->
+    <div id="pauseScreen" class="ui-layer hidden interactive bg-black/40 backdrop-blur-sm">
+        <div class="arcade-card">
+            <h2 class="text-5xl text-[#f59e0b] mb-4 drop-shadow-[2px_2px_0_#fff]">PAUSA</h2>
+            <button id="btnResume" class="btn-base btn-play">CONTINUAR</button>
+            <button id="btnMenuFromPause" class="btn-base btn-back">MENU PRINCIPAL</button>
+        </div>
+    </div>
+
+    <!-- Skins Screen -->
+    <div id="skinsScreen" class="ui-layer hidden interactive">
+        <div class="arcade-card" style="width: 350px;">
+            <h2 class="text-4xl text-[#3b82f6] mb-4 drop-shadow-[2px_2px_0_#fff]">PAÍSES</h2>
+            <div id="skinList">
+                <div class="skin-option selected" onclick="selectSkin('brazil')" id="skin-brazil">
+                    <span class="text-xl font-bold text-[#543847]">BRASIL</span>
+                    <div class="bird-preview" style="background: linear-gradient(135deg, #009c3b 50%, #ffdf00 50%);"></div>
+                </div>
+                <div class="skin-option" onclick="selectSkin('portugal')" id="skin-portugal">
+                    <span class="text-xl font-bold text-[#543847]">PORTUGAL</span>
+                    <div class="bird-preview" style="background: linear-gradient(90deg, #006600 40%, #ff0000 40%);"></div>
+                </div>
+                <div class="skin-option" onclick="selectSkin('usa')" id="skin-usa">
+                    <span class="text-xl font-bold text-[#543847]">EUA</span>
+                    <div class="bird-preview" style="background: repeating-linear-gradient(0deg, #b22234, #b22234 3px, #fff 3px, #fff 6px);"></div>
+                </div>
+                <div class="skin-option" onclick="selectSkin('france')" id="skin-france">
+                    <span class="text-xl font-bold text-[#543847]">FRANÇA</span>
+                    <div class="bird-preview" style="background: linear-gradient(90deg, #0055a4 33%, #ffffff 33%, #ffffff 66%, #ef4135 66%);"></div>
+                </div>
+                <div class="skin-option" onclick="selectSkin('japan')" id="skin-japan">
+                    <span class="text-xl font-bold text-[#543847]">JAPÃO</span>
+                    <div class="bird-preview" style="background: radial-gradient(circle, #bc002d 40%, #ffffff 41%);"></div>
+                </div>
+                <div class="skin-option" onclick="selectSkin('germany')" id="skin-germany">
+                    <span class="text-xl font-bold text-[#543847]">ALEMANHA</span>
+                    <div class="bird-preview" style="background: linear-gradient(0deg, #ffce00 33%, #dd0000 33%, #dd0000 66%, #000 66%);"></div>
+                </div>
+                <div class="skin-option" onclick="selectSkin('rainbow')" id="skin-rainbow">
+                    <span class="text-xl font-bold text-[#543847]">ARCO-ÍRIS</span>
+                    <div class="bird-preview" style="background: linear-gradient(45deg, red, orange, yellow, green, blue, violet);"></div>
+                </div>
+            </div>
+            <button id="btnBackFromSkins" class="btn-base btn-back">VOLTAR</button>
+        </div>
+    </div>
+
+    <!-- Game Over -->
+    <div id="gameOverScreen" class="ui-layer hidden interactive">
+        <div class="arcade-card">
+            <h2 class="text-5xl text-[#e6602e] mb-4 drop-shadow-[2px_2px_0_#fff]">GAME OVER</h2>
+            <div class="flex gap-4 mb-4 bg-[#cbb968] p-4 border-2 border-[#543847] rounded">
+                <div class="flex flex-col items-center justify-center w-20">
+                    <div class="text-sm text-[#543847] uppercase">Estação</div>
+                    <div id="finalSeasonIcon" class="text-4xl mt-1">☀</div>
+                </div>
+                <div class="flex flex-col items-end border-l-2 border-[#543847] pl-4 w-32">
+                    <div class="text-sm text-[#543847] uppercase">Score</div>
+                    <div id="finalScore" class="text-3xl text-white drop-shadow-[2px_2px_0_#000]">0</div>
+                    <div class="text-xs text-[#e6602e] mt-1 uppercase">Best</div>
+                    <div id="bestScore" class="text-xl text-white drop-shadow-[1px_1px_0_#000]">0</div>
+                </div>
+            </div>
+            <button id="btnRestart" class="btn-base btn-play">REPETIR</button>
+            <button id="btnHome" class="btn-base btn-skin-menu">MENU</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+
+        const CONFIG = {
+            gravity: 0.25, jump: -5.5, groundH: 112, pipeGap: 130, pipeSpeed: 3, rotSpeed: 3, spawnRate: 100,
+            seasonLength: 20
+        };
+
+        let state = { 
+            curr: 'SPLASH',
+            frames: 0, score: 0, best: localStorage.getItem('remasterBest') || 0, shake: 0,
+            skin: localStorage.getItem('selectedSkin') || 'brazil'
+        };
+
+        // --- SKINS (PAÍSES) ---
+        const SKINS = {
+            'brazil': { type: 'brazil', wing: '#fff' },
+            'portugal': { type: 'portugal', wing: '#fff' },
+            'usa': { type: 'usa', wing: '#fff' },
+            'france': { type: 'france', wing: '#000' },
+            'japan': { type: 'japan', wing: '#000' },
+            'germany': { type: 'germany', wing: '#fff' },
+            'rainbow': { type: 'rainbow', wing: '#fff' }
+        };
+
+        function selectSkin(skinId) {
+            state.skin = skinId;
+            localStorage.setItem('selectedSkin', skinId);
+            document.querySelectorAll('.skin-option').forEach(el => el.classList.remove('selected'));
+            const el = document.getElementById('skin-' + skinId);
+            if(el) el.classList.add('selected');
+        }
+
+        // --- CORES & ESTAÇÕES ---
+        function hexToRgb(hex) {
+            var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : null;
+        }
+
+        function lerpColor(hexA, hexB, t) {
+            const a = hexToRgb(hexA);
+            const b = hexToRgb(hexB);
+            const r = Math.round(a.r + (b.r - a.r) * t);
+            const g = Math.round(a.g + (b.g - a.g) * t);
+            const b_val = Math.round(a.b + (b.b - a.b) * t);
+            return `rgb(${r}, ${g}, ${b_val})`;
+        }
+
+        const SEASONS = [
+            { id: 0, name: 'VERÃO', icon: '☀', skyTop: '#4ec0ca', skyBot: '#87d6df', ground: '#ded895', grass: '#73bf2e', bg: '#a3e6cb', pipe: '#73bf2e', particle: null },
+            { id: 1, name: 'OUTONO', icon: '🍂', skyTop: '#f97316', skyBot: '#fdba74', ground: '#78350f', grass: '#d97706', bg: '#fb923c', pipe: '#ea580c', particle: { type: 'leaf', color: '#9a3412' } },
+            { id: 2, name: 'INVERNO', icon: '❄', skyTop: '#334155', skyBot: '#94a3b8', ground: '#e2e8f0', grass: '#f8fafc', bg: '#64748b', pipe: '#cbd5e1', particle: { type: 'snow', color: '#ffffff' } },
+            { id: 3, name: 'PRIMAVERA', icon: '🌸', skyTop: '#60a5fa', skyBot: '#c084fc', ground: '#f0abfc', grass: '#d8b4fe', bg: '#a78bfa', pipe: '#c084fc', particle: { type: 'petal', color: '#fbcfe8' } }
+        ];
+        
+        let currentVisuals = { ...SEASONS[0] };
+        let activeSeasonIndex = 0;
+
+        function updateSeasonVisuals() {
+            const totalScore = state.score;
+            const cyclePos = totalScore % CONFIG.seasonLength;
+            const currentIdx = Math.floor(totalScore / CONFIG.seasonLength) % SEASONS.length;
+            const nextIdx = (currentIdx + 1) % SEASONS.length;
+            const seasonNow = SEASONS[currentIdx];
+            const seasonNext = SEASONS[nextIdx];
+
+            if (activeSeasonIndex !== currentIdx) {
+                activeSeasonIndex = currentIdx;
+                updateSeasonLabel(seasonNow);
+            }
+
+            let t = 0;
+            const transitionStart = 15; 
+            if (cyclePos >= transitionStart) {
+                t = (cyclePos - transitionStart) / (CONFIG.seasonLength - transitionStart);
+            }
+
+            currentVisuals.skyTop = lerpColor(seasonNow.skyTop, seasonNext.skyTop, t);
+            currentVisuals.skyBot = lerpColor(seasonNow.skyBot, seasonNext.skyBot, t);
+            currentVisuals.ground = lerpColor(seasonNow.ground, seasonNext.ground, t);
+            currentVisuals.grass = lerpColor(seasonNow.grass, seasonNext.grass, t);
+            currentVisuals.bg = lerpColor(seasonNow.bg, seasonNext.bg, t);
+            currentVisuals.pipe = lerpColor(seasonNow.pipe, seasonNext.pipe, t);
+            currentVisuals.particle = seasonNow.particle;
+        }
+
+        function updateSeasonLabel(season) {
+            const label = document.getElementById('seasonLabel');
+            label.innerText = season.name + " " + season.icon;
+            label.classList.remove('visible');
+            setTimeout(() => label.classList.add('visible'), 100);
+        }
+
+        // --- SISTEMA DE ÁUDIO & MÚSICA ROBUSTO ---
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let isMusicPlaying = false; 
+        let musicTimer = null; 
+        let nextNoteTime = 0; 
+        let noteIndex = 0;
+        let currentMelodyType = 'MENU';
+        let audioUnlocked = false;
+
+        const menuMelody = [{f:392.00,d:0.4}, {f:329.63,d:0.4}, {f:261.63,d:0.4}, {f:196.00,d:0.8}, {f:261.63,d:0.4}, {f:329.63,d:0.4}, {f:392.00,d:0.8}, {f:0,d:0.4}];
+        const gameMelody = [{f:261.63,d:0.2},{f:329.63,d:0.2},{f:392.00,d:0.2},{f:523.25,d:0.4},{f:392.00,d:0.2},{f:523.25,d:0.4},{f:0,d:0.1},{f:293.66,d:0.2},{f:349.23,d:0.2},{f:440.00,d:0.2},{f:587.33,d:0.4},{f:440.00,d:0.2},{f:587.33,d:0.4},{f:0,d:0.1}];
+
+        // Tenta acordar o AudioContext
+        function resumeAudioContext() {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume().then(() => {
+                    audioUnlocked = true;
+                    return true;
+                }).catch(() => false);
+            }
+            audioUnlocked = true;
+        }
+
+        function playTone(freq, duration, time, vol=0.1, type='square') {
+            try {
+                const osc=audioCtx.createOscillator(); const gain=audioCtx.createGain();
+                osc.type=type; osc.frequency.setValueAtTime(freq, time);
+                gain.gain.setValueAtTime(vol, time); gain.gain.exponentialRampToValueAtTime(0.01, time+duration-0.05);
+                osc.connect(gain); gain.connect(audioCtx.destination); osc.start(time); osc.stop(time+duration);
+            } catch(e) {}
+        }
+
+        function scheduleMusic() {
+            const melody = currentMelodyType === 'GAME' ? gameMelody : menuMelody;
+            
+            // Sync check agressivo
+            if (nextNoteTime < audioCtx.currentTime) {
+                nextNoteTime = audioCtx.currentTime + 0.05;
+            }
+
+            while (nextNoteTime < audioCtx.currentTime + 0.5) {
+                const note = melody[noteIndex];
+                if(note.f > 0) { 
+                    playTone(note.f, note.d, nextNoteTime, 0.05, 'square'); 
+                    if(noteIndex % 2 === 0) playTone(note.f/2, 0.1, nextNoteTime, 0.08, 'triangle'); 
+                }
+                nextNoteTime += note.d; 
+                noteIndex = (noteIndex + 1) % melody.length;
+            }
+            if(isMusicPlaying) musicTimer = requestAnimationFrame(scheduleMusic);
+        }
+
+        function startMusic(type) {
+            if (currentMelodyType === type && isMusicPlaying) return;
+            // Tenta dar resume sempre que iniciar música
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            
+            currentMelodyType = type;
+            isMusicPlaying = true;
+            noteIndex = 0;
+            // IMPORTANTE: Reseta o tempo para agora
+            nextNoteTime = audioCtx.currentTime + 0.1;
+            
+            if(musicTimer) cancelAnimationFrame(musicTimer);
+            scheduleMusic();
+        }
+
+        function stopMusic() { isMusicPlaying = false; if (musicTimer) cancelAnimationFrame(musicTimer); }
+
+        function playSound(type) {
+            if(!audioUnlocked && audioCtx.state === 'suspended') return;
+            const now = audioCtx.currentTime; 
+            if(type==='flap')playTone(300, 0.1, now, 0.2, 'triangle');
+            else if(type==='score') { 
+                playTone(1000, 0.1, now, 0.1, 'square'); 
+                playTone(1500, 0.1, now + 0.05, 0.1, 'square'); 
+            }
+            else if(type==='hit')playTone(150, 0.3, now, 0.3, 'sawtooth');
+        }
+
+        // --- CLIMA ---
+        let weatherParticles = [];
+        function updateWeather() {
+            if (currentVisuals.particle && state.frames % 5 === 0) {
+                weatherParticles.push({
+                    x: Math.random() * canvas.width, y: -10, vx: (Math.random() - 0.5) * 2, vy: Math.random() * 2 + 1,
+                    size: Math.random() * 4 + 2, type: currentVisuals.particle.type, color: currentVisuals.particle.color, oscillation: Math.random() * Math.PI * 2
+                });
+            }
+            for (let i = 0; i < weatherParticles.length; i++) {
+                let p = weatherParticles[i]; p.x += p.vx; p.y += p.vy; p.oscillation += 0.05;
+                if (p.type === 'leaf' || p.type === 'petal') p.x += Math.sin(p.oscillation) * 0.5;
+                if (p.y > canvas.height) { weatherParticles.splice(i, 1); i--; }
+            }
+        }
+        function drawWeather() {
+            for (let p of weatherParticles) {
+                ctx.fillStyle = p.color;
+                if (p.type === 'snow') { ctx.beginPath(); ctx.arc(p.x, p.y, p.size/2, 0, Math.PI*2); ctx.fill(); }
+                else if (p.type === 'leaf') { ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.oscillation); ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size); ctx.restore(); } 
+                else if (p.type === 'petal') { ctx.beginPath(); ctx.ellipse(p.x, p.y, p.size, p.size/2, p.oscillation, 0, Math.PI*2); ctx.fill(); }
+            }
+        }
+
+        // --- ENTIDADES ---
+        const bird = {
+            x: 60, y: 150, v: 0, r: 14, rot: 0,
+            draw() {
+                ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.rot * Math.PI/180);
+                let skinData = SKINS[state.skin] || SKINS['brazil'];
+                let type = skinData.type;
+
+                ctx.beginPath(); ctx.arc(0, 0, 17, 0, Math.PI*2); ctx.clip();
+
+                if (type === 'brazil') { ctx.fillStyle = '#009c3b'; ctx.fillRect(-17, -17, 34, 34); ctx.fillStyle = '#ffdf00'; ctx.beginPath(); ctx.moveTo(0, -14); ctx.lineTo(14, 0); ctx.lineTo(0, 14); ctx.lineTo(-14, 0); ctx.fill(); ctx.fillStyle = '#002776'; ctx.beginPath(); ctx.arc(0, 0, 6, 0, Math.PI*2); ctx.fill(); } 
+                else if (type === 'portugal') { ctx.fillStyle = '#006600'; ctx.fillRect(-17, -17, 14, 34); ctx.fillStyle = '#ff0000'; ctx.fillRect(-3, -17, 20, 34); ctx.fillStyle = '#ffdf00'; ctx.beginPath(); ctx.arc(-3, 0, 6, 0, Math.PI*2); ctx.fill(); } 
+                else if (type === 'usa') { ctx.fillStyle = '#fff'; ctx.fillRect(-17, -17, 34, 34); ctx.fillStyle = '#b22234'; for(let i=-17; i<17; i+=6) ctx.fillRect(-17, i, 34, 3); ctx.fillStyle = '#3c3b6e'; ctx.fillRect(-17, -17, 16, 16); } 
+                else if (type === 'france') { ctx.fillStyle = '#0055a4'; ctx.fillRect(-17, -17, 11, 34); ctx.fillStyle = '#ffffff'; ctx.fillRect(-6, -17, 11, 34); ctx.fillStyle = '#ef4135'; ctx.fillRect(5, -17, 12, 34); } 
+                else if (type === 'japan') { ctx.fillStyle = '#ffffff'; ctx.fillRect(-17, -17, 34, 34); ctx.fillStyle = '#bc002d'; ctx.beginPath(); ctx.arc(0, 0, 8, 0, Math.PI*2); ctx.fill(); } 
+                else if (type === 'germany') { ctx.fillStyle = '#000000'; ctx.fillRect(-17, -17, 34, 11); ctx.fillStyle = '#dd0000'; ctx.fillRect(-17, -6, 34, 11); ctx.fillStyle = '#ffce00'; ctx.fillRect(-17, 5, 34, 12); } 
+                else if (type === 'rainbow') { let hue = (state.frames * 5) % 360; ctx.fillStyle = `hsl(${hue}, 100%, 50%)`; ctx.fillRect(-17, -17, 34, 34); }
+                ctx.beginPath(); ctx.arc(0,0,17,0,Math.PI*2); ctx.strokeStyle='#000'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(0,0,17,0,Math.PI*2); ctx.stroke();
+                ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(6,-6,7,0,Math.PI*2); ctx.fill(); ctx.stroke();
+                ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(8,-6,2,0,Math.PI*2); ctx.fill();
+                ctx.fillStyle = skinData.wing; ctx.beginPath(); ctx.ellipse(-6, 2, 8, 5, 0, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+                ctx.fillStyle='#f97316'; ctx.beginPath(); ctx.rect(8,2,10,6); ctx.fill(); ctx.stroke(); ctx.beginPath(); ctx.moveTo(18,5); ctx.lineTo(8,5); ctx.stroke();
+                ctx.restore();
+            },
+            update() {
+                this.v+=CONFIG.gravity; this.y+=this.v;
+                if(this.v<0)this.rot=-25; else if(this.rot<90)this.rot+=CONFIG.rotSpeed;
+                if(this.y+this.r>=canvas.height-CONFIG.groundH) { this.y=canvas.height-CONFIG.groundH-this.r; gameOver(); }
+            },
+            flap() { this.v=CONFIG.jump; spawnParticles(this.x-10, this.y); playSound('flap'); },
+            reset() { this.y=150; this.v=0; this.rot=0; }
+        };
+
+        const background = {
+            cloudsX: 0, cityX: 0, groundX: 0,
+            draw() {
+                let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+                grad.addColorStop(0, currentVisuals.skyTop); grad.addColorStop(1, currentVisuals.skyBot);
+                ctx.fillStyle = grad; ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = '#fff';
+                this.drawLayer(this.cloudsX, 400, (x) => { ctx.beginPath(); ctx.arc(x, 100, 30, 0, Math.PI*2); ctx.arc(x+25, 90, 35, 0, Math.PI*2); ctx.arc(x+50, 100, 28, 0, Math.PI*2); ctx.fill(); });
+                ctx.fillStyle = currentVisuals.bg;
+                this.drawLayer(this.cityX, 300, (x) => { let y = canvas.height - CONFIG.groundH - 100; ctx.fillRect(x, y + 20, 60, 80); ctx.fillRect(x + 70, y, 50, 100); ctx.fillRect(x + 130, y + 40, 40, 60); });
+                let gy = canvas.height - CONFIG.groundH;
+                ctx.fillStyle = currentVisuals.ground; ctx.fillRect(0, gy, canvas.width, CONFIG.groundH);
+                ctx.fillStyle = currentVisuals.grass; ctx.fillRect(0, gy, canvas.width, 14);
+                ctx.strokeStyle = '#543847'; ctx.lineWidth=3; ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(canvas.width, gy); ctx.stroke();
+                ctx.fillStyle = 'rgba(0,0,0,0.1)'; let offset = this.groundX % 20;
+                for(let i=-1; i<canvas.width/20 + 1; i++) { ctx.beginPath(); ctx.moveTo(i*20 - offset, gy + 15); ctx.lineTo(i*20 - offset + 10, canvas.height); ctx.lineTo(i*20 - offset - 5, canvas.height); ctx.lineTo(i*20 - offset - 15, gy + 15); ctx.fill(); }
+            },
+            drawLayer(offset, width, drawFn) { let count=Math.ceil(canvas.width/width)+1; let off=offset%width; for(let i=-1; i<count; i++) drawFn(i*width-off); },
+            update() { if(state.curr==='PLAY') { this.cloudsX+=0.5; this.cityX+=1; this.groundX+=CONFIG.pipeSpeed; } }
+        };
+
+        const pipes = {
+            items: [],
+            reset() { this.items = []; },
+            update() {
+                if(state.frames%CONFIG.spawnRate===0) { let minY=50, maxY=canvas.height-CONFIG.groundH-CONFIG.pipeGap-minY; this.items.push({x:canvas.width, top:Math.floor(Math.random()*(maxY-minY+1)+minY), passed:false}); }
+                for(let i=0; i<this.items.length; i++) {
+                    let p=this.items[i]; p.x-=CONFIG.pipeSpeed; let bx=bird.x, by=bird.y, br=10; 
+                    if(bx+br>p.x && bx-br<p.x+52) { if(by-br<p.top || by+br>p.top+CONFIG.pipeGap) gameOver(); }
+                    if(p.x+52<bx && !p.passed) { state.score++; p.passed=true; document.getElementById('scoreVal').innerText=state.score; playSound('score'); }
+                    if(p.x<-60) { this.items.shift(); i--; }
+                }
+            },
+            draw() {
+                for(let p of this.items) {
+                    let w=52, botY=p.top+CONFIG.pipeGap, botH=canvas.height-CONFIG.groundH-botY;
+                    ctx.fillStyle = currentVisuals.pipe; ctx.strokeStyle='#543847'; ctx.lineWidth=3;
+                    ctx.fillRect(p.x, 0, w, p.top); ctx.strokeRect(p.x, -2, w, p.top);
+                    ctx.fillRect(p.x-2, p.top-24, w+4, 24); ctx.strokeRect(p.x-2, p.top-24, w+4, 24);
+                    ctx.fillRect(p.x, botY, w, botH); ctx.strokeRect(p.x, botY, w, botH);
+                    ctx.fillRect(p.x-2, botY, w+4, 24); ctx.strokeRect(p.x-2, botY, w+4, 24);
+                    ctx.fillStyle = 'rgba(255,255,255,0.3)'; ctx.fillRect(p.x+4, 0, 4, p.top-24); ctx.fillRect(p.x+4, botY+24, 4, botH-24);
+                }
+            }
+        };
+
+        let particles = [];
+        function spawnParticles(x, y) { for(let i=0; i<4; i++) particles.push({ x: x, y: y, vx: (Math.random() - 0.5) * 4, vy: (Math.random() - 0.5) * 4, life: 1 }); }
+        function drawParticles() {
+            for(let i=0; i<particles.length; i++) {
+                let p = particles[i]; p.x += p.vx; p.y += p.vy; p.life -= 0.05;
+                ctx.fillStyle = `rgba(255, 255, 255, ${p.life})`; ctx.fillRect(p.x, p.y, 4, 4);
+                if (p.life <= 0) { particles.splice(i, 1); i--; }
+            }
+        }
+
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        window.addEventListener('resize', resize); resize();
+
+        function loop() {
+            ctx.save();
+            if (state.shake > 0) { ctx.translate((Math.random() - 0.5) * state.shake, (Math.random() - 0.5) * state.shake); state.shake *= 0.9; if (state.shake < 0.5) state.shake = 0; }
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            if (state.curr === 'PLAY') updateSeasonVisuals();
+            background.draw(); drawWeather(); pipes.draw(); bird.draw(); drawParticles(); ctx.restore();
+            if (state.curr === 'PLAY') { background.update(); updateWeather(); bird.update(); pipes.update(); state.frames++; } else if (state.curr === 'OVER' && bird.y < canvas.height - CONFIG.groundH - bird.r) { bird.y += 10; bird.rot = 90; }
+            requestAnimationFrame(loop);
+        }
+
+        // --- GESTÃO DE FLUXO AUTOMÁTICO ---
+        function startIntroSequence() {
+            // Tenta iniciar áudio silenciosamente (falhará na maioria dos browsers se não houver clique)
+            resumeAudioContext();
+            
+            // Aguarda 3 segundos para ler os créditos
+            setTimeout(() => {
+                if(state.curr === 'SPLASH') {
+                    const splash = document.getElementById('splashScreen');
+                    splash.style.opacity = '0';
+                    setTimeout(() => {
+                        splash.classList.add('hidden');
+                        goToMenu();
+                        // Tenta tocar música ao entrar no menu
+                        startMusic('MENU');
+                    }, 500);
+                }
+            }, 3000);
+        }
+
+        // Adiciona um listener global para destravar o áudio na primeira interação do usuário (clique em qualquer lugar)
+        window.addEventListener('click', () => {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+                if(!isMusicPlaying && state.curr !== 'PLAY') {
+                    startMusic('MENU');
+                }
+            }
+        }, { once: true });
+
+        function startGame() {
+            // Garante que o áudio está ligado ao clicar em JOGAR
+            resumeAudioContext();
+            
+            state.curr = 'PLAY'; state.score = 0; state.frames = 0; bird.reset(); pipes.reset();
+            activeSeasonIndex = 0; currentVisuals = { ...SEASONS[0] }; weatherParticles = [];
+            document.getElementById('scoreVal').innerText = '0';
+            updateSeasonLabel(SEASONS[0]);
+            toggleUI('hud', true); toggleUI('startScreen', false); toggleUI('gameOverScreen', false); toggleUI('pauseScreen', false);
+            startMusic('GAME');
+        }
+
+        function togglePause() {
+            if (state.curr === 'PLAY') { state.curr = 'PAUSE'; stopMusic(); toggleUI('pauseScreen', true); } 
+            else if (state.curr === 'PAUSE') { state.curr = 'PLAY'; startMusic('GAME'); toggleUI('pauseScreen', false); }
+        }
+
+        function goToMenu() {
+            state.curr = 'START'; startMusic('MENU');
+            toggleUI('hud', false); toggleUI('gameOverScreen', false); toggleUI('pauseScreen', false); toggleUI('skinsScreen', false); toggleUI('startScreen', true);
+            bird.y = canvas.height / 2; bird.rot = 0; pipes.reset(); weatherParticles = []; currentVisuals = { ...SEASONS[0] }; background.draw(); bird.draw();
+        }
+
+        function gameOver() {
+            if (state.curr === 'OVER') return;
+            state.curr = 'OVER'; state.shake = 20; playSound('hit'); stopMusic();
+            document.getElementById('flash').style.opacity = '0.6'; setTimeout(() => document.getElementById('flash').style.opacity = '0', 100);
+            if (state.score > state.best) { state.best = state.score; localStorage.setItem('remasterBest', state.best); }
+            document.getElementById('finalSeasonIcon').innerText = SEASONS[activeSeasonIndex].icon;
+            document.getElementById('finalScore').innerText = state.score; document.getElementById('bestScore').innerText = state.best;
+            toggleUI('hud', false); setTimeout(() => toggleUI('gameOverScreen', true), 500);
+        }
+
+        function toggleUI(id, show) {
+            const el = document.getElementById(id);
+            if (show) el.classList.remove('hidden'); else el.classList.add('hidden');
+        }
+
+        function showSkinsMenu() { selectSkin(state.skin); toggleUI('startScreen', false); toggleUI('skinsScreen', true); }
+        function closeSkinsMenu() { toggleUI('skinsScreen', false); toggleUI('startScreen', true); }
+
+        function handleInput(e) {
+            if (e.target.closest('button') || e.target.closest('.skin-option')) return;
+            if (e.type === 'touchstart') e.preventDefault();
+            if (state.curr === 'PLAY') bird.flap();
+        }
+
+        window.addEventListener('keydown', (e) => { if (e.code === 'Space') { if(state.curr === 'PLAY') bird.flap(); }});
+        window.addEventListener('mousedown', handleInput);
+        window.addEventListener('touchstart', handleInput, {passive: false});
+
+        document.getElementById('btnPlay').onclick = startGame;
+        document.getElementById('btnRestart').onclick = startGame;
+        document.getElementById('btnHome').onclick = goToMenu;
+        document.getElementById('btnExit').onclick = goToMenu;
+        document.getElementById('btnSkins').onclick = showSkinsMenu;
+        document.getElementById('btnBackFromSkins').onclick = closeSkinsMenu;
+        document.getElementById('btnPause').onclick = togglePause;
+        document.getElementById('btnResume').onclick = togglePause;
+        document.getElementById('btnMenuFromPause').onclick = goToMenu;
+        
+        // Iniciar loop e sequência
+        selectSkin(state.skin);
+        bird.y = canvas.height / 2; background.draw(); bird.draw(); loop();
+        
+        // Dispara a introdução automaticamente ao carregar
+        window.onload = startIntroSequence;
+
+    </script>
+</body>
+
+    
+</html>
+

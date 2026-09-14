@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo da Cobrinha com Recordes</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Press Start 2P', cursive;
+            background-color: #0a191e;
+            color: #c7f0d8;
+            touch-action: manipulation;
+        }
+        .nokia-screen {
+            background-color: #c7f0d8;
+            border: 20px solid #2c3e50;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5) inset, 0 5px 15px rgba(0,0,0,0.3);
+        }
+        canvas {
+            background-color: #c7f0d8;
+            display: block;
+        }
+        .nokia-text {
+            color: #0a191e;
+        }
+        .nokia-button {
+            background-color: #7f8c8d;
+            border: 2px solid #2c3e50;
+            border-radius: 8px;
+            color: #ecf0f1;
+            box-shadow: 0 4px #34495e;
+            user-select: none;
+            transition: all 0.1s ease-in-out;
+        }
+        .nokia-button:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 #34495e;
+        }
+        /* Estilos para os novos elementos (modal, tela de início) */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+            z-index: 40;
+        }
+        .modal-content {
+            z-index: 50;
+        }
+        .start-input {
+            font-family: 'Press Start 2P', cursive;
+            text-transform: uppercase;
+            background-color: #a2b1b2;
+            border: 2px solid #2c3e50;
+            color: #0a191e;
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <!-- Container principal que simula o celular -->
+    <div id="device-container" class="nokia-screen w-full max-w-sm p-4 flex flex-col items-center">
+
+        <!-- TELA DE INÍCIO -->
+        <div id="start-screen" class="w-full text-center nokia-text">
+            <h1 class="text-xl uppercase">Cobrinha</h1>
+            <p class="text-sm mt-4 mb-6">Digite seu nome para jogar e salvar seu recorde!</p>
+            <input type="text" id="player-name-input" placeholder="SEU NOME" maxlength="10" class="w-full p-2 text-center start-input mb-4">
+            <button id="start-game-button" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 px-4 rounded-lg shadow-md disabled:opacity-50" disabled>
+                Carregando...
+            </button>
+        </div>
+
+        <!-- TELA DO JOGO (ESCONDIDA INICIALMENTE) -->
+        <div id="game-wrapper" class="hidden w-full flex-col items-center">
+            <!-- Título e Placar -->
+            <div class="w-full text-center mb-4 nokia-text">
+                <h1 class="text-xl uppercase">Cobrinha</h1>
+                <p class="text-lg mt-2">PLACAR: <span id="score">0</span></p>
+                <p class="text-xs mt-1">JOGADOR: <span id="player-display"></span></p>
+            </div>
+
+            <!-- Canvas do Jogo -->
+            <canvas id="gameCanvas" class="border-2 border-dashed border-gray-600 rounded-md"></canvas>
+            
+            <!-- Botão para ver recordes -->
+            <button id="leaderboard-btn" class="w-4/5 max-w-xs mt-4 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-xs">Ver Recordes</button>
+
+            <!-- Controles -->
+            <div class="grid grid-cols-3 gap-3 mt-4 w-4/5 max-w-xs">
+                <div></div>
+                <button id="upBtn" class="nokia-button p-4 text-2xl" aria-label="Mover para Cima">↑</button>
+                <div></div>
+                <button id="leftBtn" class="nokia-button p-4 text-2xl" aria-label="Mover para Esquerda">←</button>
+                <button id="downBtn" class="nokia-button p-4 text-2xl" aria-label="Mover para Baixo">↓</button>
+                <button id="rightBtn" class="nokia-button p-4 text-2xl" aria-label="Mover para Direita">→</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Fim de Jogo -->
+    <div id="gameOverModal" class="hidden fixed inset-0 bg-black bg-opacity-70 flex flex-col justify-center items-center text-center p-4 z-50">
+        <h2 class="text-3xl text-red-500">FIM DE JOGO</h2>
+        <p class="text-xl mt-4">Seu placar foi: <span id="finalScore">0</span></p>
+        <p class="text-sm mt-2">Seu recorde foi salvo!</p>
+        <button id="restartBtn" class="mt-8 bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-xl">
+            Jogar Novamente
+        </button>
+    </div>
+
+    <!-- Modal do Ranking (Layout Corrigido) -->
+    <div id="leaderboard-modal" class="hidden fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content bg-gray-800 text-white rounded-lg shadow-xl p-6 w-full max-w-md max-h-[80vh] flex flex-col">
+            <h3 class="text-2xl font-bold text-center text-yellow-400 mb-4">RANKING GERAL</h3>
+            <div id="leaderboard-content" class="overflow-y-auto text-sm">
+                 <p id="leaderboard-loading" class="text-center text-gray-400">A carregar recordes...</p>
+            </div>
+            <div class="mt-6 text-center">
+                <button id="close-leaderboard-button" class="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- Importações do Firebase ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getDatabase, ref, push, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+        // --- Elementos do DOM ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const finalScoreEl = document.getElementById('finalScore');
+        const gameOverModal = document.getElementById('gameOverModal');
+        const restartBtn = document.getElementById('restartBtn');
+        const upBtn = document.getElementById('upBtn');
+        const downBtn = document.getElementById('downBtn');
+        const leftBtn = document.getElementById('leftBtn');
+        const rightBtn = document.getElementById('rightBtn');
+        const startScreen = document.getElementById('start-screen');
+        const gameWrapper = document.getElementById('game-wrapper');
+        const playerNameInput = document.getElementById('player-name-input');
+        const startGameButton = document.getElementById('start-game-button');
+        const playerDisplay = document.getElementById('player-display');
+        const leaderboardBtn = document.getElementById('leaderboard-btn');
+        const leaderboardModal = document.getElementById('leaderboard-modal');
+        const leaderboardContent = document.getElementById('leaderboard-content');
+        const leaderboardLoading = document.getElementById('leaderboard-loading');
+        const closeLeaderboardButton = document.getElementById('close-leaderboard-button');
+
+        // --- Configuração do Firebase ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyDBTrsQWc6GPq5R0Ai2KmPki3hpHbg4c6g",
+          authDomain: "joga-cobrinha.firebaseapp.com",
+          projectId: "joga-cobrinha",
+          storageBucket: "joga-cobrinha.appspot.com",
+          messagingSenderId: "849126304274",
+          appId: "1:849126304274:web:e6855f68bd06e33e9686cb"
+        };
+        let db;
+        const LEADERBOARD_PATH = 'public/leaderboard-cobrinha';
+
+        // --- Imagem da Fruta ---
+        const foodImage = new Image();
+        foodImage.src = 'https://gcdnb.pbrd.co/images/6Z4poOg2Cvru.jpg?o';
+        let useFallbackFood = false;
+        foodImage.onerror = () => {
+            console.error("Erro ao carregar a imagem da fruta. Usando fallback de cor.");
+            useFallbackFood = true;
+        };
+
+        const gridSize = 20;
+        let canvasSize;
+
+        // --- Estado do Jogo ---
+        let snake, food, direction, score, isGameOver, gameLoopInterval, changingDirection;
+        let playerName = 'ANONIMO';
+        const SNAKE_COLOR = '#0a191e';
+        const FOOD_COLOR = '#d63031';
+
+        // --- Funções do Jogo ---
+
+        function setupCanvas() {
+            const screenWrapper = document.querySelector('.nokia-screen');
+            const padding = 32;
+            let size = screenWrapper.offsetWidth - padding;
+            size = Math.floor(size / gridSize) * gridSize;
+            canvasSize = size;
+            canvas.width = canvasSize;
+            canvas.height = canvasSize;
+        }
+
+        function initGame() {
+            snake = [{ x: Math.floor(canvasSize / gridSize / 2) * gridSize, y: Math.floor(canvasSize / gridSize / 2) * gridSize }];
+            direction = { x: 0, y: 0 };
+            score = 0;
+            isGameOver = false;
+            changingDirection = false;
+            scoreEl.innerText = score;
+            generateFood();
+            gameOverModal.classList.add('hidden');
+
+            if (gameLoopInterval) clearInterval(gameLoopInterval);
+            gameLoopInterval = setInterval(gameLoop, 150);
+        }
+
+        function generateFood() {
+            food = {
+                x: Math.floor(Math.random() * (canvasSize / gridSize)) * gridSize,
+                y: Math.floor(Math.random() * (canvasSize / gridSize)) * gridSize
+            };
+            for (let segment of snake) {
+                if (segment.x === food.x && segment.y === food.y) {
+                    generateFood();
+                    break;
+                }
+            }
+        }
+
+        function drawRect(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, gridSize, gridSize);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, canvasSize, canvasSize);
+            snake.forEach(segment => drawRect(segment.x, segment.y, SNAKE_COLOR));
+            if (!useFallbackFood && foodImage.complete && foodImage.naturalHeight !== 0) {
+                ctx.drawImage(foodImage, food.x, food.y, gridSize, gridSize);
+            } else {
+                drawRect(food.x, food.y, FOOD_COLOR);
+            }
+        }
+
+        function moveSnake() {
+            if (direction.x === 0 && direction.y === 0) return;
+            const head = { x: snake[0].x + direction.x, y: snake[0].y + direction.y };
+            snake.unshift(head);
+            if (head.x === food.x && head.y === food.y) {
+                score++;
+                scoreEl.innerText = score;
+                generateFood();
+            } else {
+                snake.pop();
+            }
+        }
+
+        function checkCollision() {
+            const head = snake[0];
+            if (head.x < 0 || head.x >= canvasSize || head.y < 0 || head.y >= canvasSize) {
+                endGame();
+            }
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    endGame();
+                    break;
+                }
+            }
+        }
+
+        function endGame() {
+            isGameOver = true;
+            clearInterval(gameLoopInterval);
+            finalScoreEl.innerText = score;
+            saveScore(playerName, score);
+            gameOverModal.classList.remove('hidden');
+        }
+
+        function gameLoop() {
+            if (isGameOver) return;
+            changingDirection = false;
+            moveSnake();
+            checkCollision();
+            draw();
+        }
+
+        function changeDirection(newDirection) {
+            if (changingDirection) return;
+            
+            if (newDirection === 'UP') {
+                direction = { x: 0, y: -gridSize };
+            } else if (newDirection === 'DOWN') {
+                direction = { x: 0, y: gridSize };
+            } else if (newDirection === 'LEFT') {
+                direction = { x: -gridSize, y: 0 };
+            } else if (newDirection === 'RIGHT') {
+                direction = { x: gridSize, y: 0 };
+            }
+            changingDirection = true;
+        }
+        
+        // --- Funções de Recorde ---
+
+        async function initializeFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getDatabase(app);
+                const auth = getAuth(app);
+                await signInAnonymously(auth);
+                startGameButton.disabled = false;
+                startGameButton.textContent = "Iniciar Jogo";
+                listenForLeaderboardUpdates();
+            } catch (error) { 
+                startGameButton.textContent = "Erro de Conexão";
+                console.error("Erro ao inicializar o Firebase:", error); 
+            }
+        }
+
+        function saveScore(name, score) {
+            if (!db || score === 0) return;
+            const leaderboardRef = ref(db, LEADERBOARD_PATH);
+            push(leaderboardRef, {
+                name: name,
+                score: score,
+                timestamp: serverTimestamp()
+            }).catch(error => console.error("Erro ao salvar placar:", error));
+        }
+
+        function listenForLeaderboardUpdates() {
+            const leaderboardRef = ref(db, LEADERBOARD_PATH);
+            onValue(leaderboardRef, (snapshot) => {
+                const scoresData = snapshot.val();
+                const allScores = [];
+                if (scoresData) {
+                    for (const key in scoresData) {
+                        allScores.push({ id: key, ...scoresData[key] });
+                    }
+                }
+
+                const bestScores = new Map();
+                allScores.forEach(score => {
+                    const existingScore = bestScores.get(score.name);
+                    if (!existingScore || score.score > existingScore.score) {
+                        bestScores.set(score.name, score);
+                    }
+                });
+
+                const uniqueBestScores = Array.from(bestScores.values());
+                uniqueBestScores.sort((a, b) => b.score - a.score);
+                
+                renderLeaderboard(uniqueBestScores);
+            });
+        }
+
+        function renderLeaderboard(scores) {
+            leaderboardLoading.classList.add('hidden');
+            if (scores.length === 0) {
+                leaderboardContent.innerHTML = '<p class="text-center text-gray-400">Nenhum recorde ainda. Seja o primeiro!</p>';
+                return;
+            }
+            let tableHTML = `<table class="w-full text-left"><thead class="text-xs text-yellow-400 uppercase"><tr><th class="px-2 py-2">#</th><th class="px-4 py-2">Nome</th><th class="px-4 py-2 text-right">Placar</th></tr></thead><tbody>`;
+            scores.slice(0, 20).forEach((s, index) => {
+                tableHTML += `<tr class="border-b border-gray-700"><td class="px-2 py-2 font-bold">${index + 1}</td><td class="px-4 py-2">${s.name}</td><td class="px-4 py-2 text-right font-bold">${s.score}</td></tr>`;
+            });
+            tableHTML += '</tbody></table>';
+            leaderboardContent.innerHTML = tableHTML;
+        }
+
+        // --- Event Listeners ---
+
+        startGameButton.addEventListener('click', () => {
+            const nameInput = playerNameInput.value.trim().toUpperCase();
+            if (nameInput) {
+                playerName = nameInput;
+            }
+            playerDisplay.textContent = playerName;
+            startScreen.classList.add('hidden');
+            gameWrapper.classList.remove('hidden');
+            gameWrapper.classList.add('flex');
+            setupCanvas();
+            initGame();
+        });
+
+        restartBtn.addEventListener('click', () => {
+            setupCanvas();
+            initGame();
+        });
+
+        leaderboardBtn.addEventListener('click', () => leaderboardModal.classList.remove('hidden'));
+        closeLeaderboardButton.addEventListener('click', () => leaderboardModal.classList.add('hidden'));
+
+        /**
+         * Listener de teclado atualizado para WASD e Setas.
+         * Adicionado e.preventDefault() para impedir que a página role ao usar as setas.
+         * A condição !isGameOver garante que os controles só funcionem durante o jogo.
+         */
+        document.addEventListener('keydown', (e) => {
+            // **CORREÇÃO APLICADA AQUI**
+            // Só executa a lógica de controle se o jogo não estiver no fim (isGameOver é false)
+            // E se o jogo já começou (gameWrapper não está escondido)
+            if (isGameOver || gameWrapper.classList.contains('hidden')) {
+                return;
+            }
+
+            const key = e.key.toLowerCase();
+            // Apenas previne o comportamento padrão para as teclas de controle do jogo
+            if (['arrowup', 'w', 'arrowdown', 's', 'arrowleft', 'a', 'arrowright', 'd'].includes(key)) {
+                e.preventDefault();
+            }
+            
+            switch (key) {
+                case 'arrowup':
+                case 'w':
+                    changeDirection('UP');
+                    break;
+                case 'arrowdown':
+                case 's':
+                    changeDirection('DOWN');
+                    break;
+                case 'arrowleft':
+                case 'a':
+                    changeDirection('LEFT');
+                    break;
+                case 'arrowright':
+                case 'd':
+                    changeDirection('RIGHT');
+                    break;
+            }
+        });
+
+        upBtn.addEventListener('click', () => changeDirection('UP'));
+        downBtn.addEventListener('click', () => changeDirection('DOWN'));
+        leftBtn.addEventListener('click', () => changeDirection('LEFT'));
+        rightBtn.addEventListener('click', () => changeDirection('RIGHT'));
+        
+        window.addEventListener('resize', () => {
+            if (!gameWrapper.classList.contains('hidden')) {
+                setupCanvas();
+                if (!isGameOver) {
+                    draw();
+                }
+            }
+        });
+
+        // --- Início ---
+        window.onload = () => {
+            initializeFirebase();
+        };
+    </script>
+</body>
+</html>

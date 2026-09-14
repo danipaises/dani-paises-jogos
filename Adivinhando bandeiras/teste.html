@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Teste de Ligação ao Firebase</title>
+    <style>
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        #status { font-size: 2em; padding: 20px; border-radius: 10px; color: white; }
+        .success { background-color: #28a745; }
+        .error { background-color: #dc3545; }
+    </style>
+</head>
+<body>
+
+    <div id="status">A tentar ligar...</div>
+
+    <script type="module">
+        // Importar as funções necessárias do Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+        // A sua configuração do Firebase
+        const firebaseConfig = {
+          apiKey: "AIzaSyB9uHMtQAejetcLZYJJLWsMmDIAJlIubq0",
+          authDomain: "dani-paises-record.firebaseapp.com",
+          databaseURL: "https://dani-paises-record-default-rtdb.firebaseio.com",
+          projectId: "dani-paises-record",
+          storageBucket: "dani-paises-record.firebasestorage.app",
+          messagingSenderId: "453701705796",
+          appId: "1:453701705796:web:1209d91652671849ce9c11"
+        };
+
+        const statusDiv = document.getElementById('status');
+
+        async function runTest() {
+            try {
+                // 1. Inicializar a aplicação Firebase
+                const app = initializeApp(firebaseConfig);
+                
+                // 2. Obter uma referência à base de dados
+                const db = getDatabase(app);
+                
+                // 3. Criar uma referência para um local de teste
+                const testRef = ref(db, 'public/connectionTest');
+                
+                // 4. Tentar escrever dados nesse local
+                await set(testRef, {
+                    timestamp: new Date().toISOString(),
+                    status: "success"
+                });
+                
+                // 5. Se tudo correu bem, mostrar sucesso
+                statusDiv.textContent = 'Sucesso! A ligação funcionou.';
+                statusDiv.classList.add('success');
+                console.log("Ligação ao Firebase bem-sucedida!");
+
+            } catch (error) {
+                // 6. Se deu erro, mostrar a mensagem de erro exata
+                statusDiv.textContent = `Falha na Ligação: ${error.code} - ${error.message}`;
+                statusDiv.classList.add('error');
+                console.error("Detalhes do erro do Firebase:", error);
+            }
+        }
+
+        // Correr o teste quando a página carregar
+        runTest();
+    </script>
+
+</body>
+</html>
+

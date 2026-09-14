@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz de Voz com Verdadeiro ou Falso</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation;
+        }
+        .status-dot {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .styled-btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: bold;
+            transition: transform 0.2s, background-color 0.2s;
+            font-size: 1.1rem;
+        }
+        .styled-btn:hover {
+            transform: scale(1.05);
+        }
+        .styled-btn:disabled {
+            background-color: #4a5568;
+            cursor: not-allowed;
+            transform: none;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen p-4">
+
+    <!-- Pop-up de Permissão de Microfone -->
+    <div id="permission-modal" class="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div class="bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-sm w-full text-center">
+            <h2 id="modal-title" class="text-2xl font-bold text-cyan-400 mb-4">Permissão de Microfone</h2>
+            <p id="modal-text" class="text-gray-300 mb-6">Este quiz é controlado por voz. Por favor, permita o acesso ao seu microfone para poder jogar.</p>
+            <button id="permission-btn" class="w-full styled-btn bg-cyan-500 hover:bg-cyan-600">Permitir Microfone</button>
+        </div>
+    </div>
+
+    <div id="quiz-container" class="w-full max-w-2xl mx-auto bg-gray-800 rounded-2xl shadow-2xl p-6 md:p-8 text-center">
+        
+        <header class="mb-6">
+            <h1 class="text-3xl md:text-4xl font-bold text-cyan-400">Quiz de Voz</h1>
+            <p class="text-gray-400 mt-2">Nível Fácil agora com Verdadeiro ou Falso.</p>
+        </header>
+
+        <main id="main-content">
+            <!-- Tela Inicial -->
+            <div id="start-screen">
+                <p class="text-lg mb-4">Para começar, clique no botão ou diga <strong class="text-cyan-400">"iniciar jogo"</strong>.</p>
+                <button id="start-btn" class="bg-cyan-500 hover:bg-cyan-600 text-white font-bold py-3 px-6 rounded-lg text-xl transition-transform transform hover:scale-105 styled-btn" disabled>
+                    Iniciar
+                </button>
+            </div>
+
+            <!-- Seleção de Categoria -->
+            <div id="category-selection" class="hidden">
+                <h2 class="text-2xl font-semibold mb-4">Escolha uma categoria:</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 justify-center">
+                    <button data-category="9" data-name="Conhecimentos Gerais" class="category-btn styled-btn bg-indigo-500 hover:bg-indigo-600">Gerais</button>
+                    <button data-category="18" data-name="Tecnologia" class="category-btn styled-btn bg-teal-500 hover:bg-teal-600">Tecnologia</button>
+                    <button data-category="23" data-name="História" class="category-btn styled-btn bg-amber-500 hover:bg-amber-600">História</button>
+                    <button data-category="17" data-name="Ciências" class="category-btn styled-btn bg-emerald-500 hover:bg-emerald-600">Ciências</button>
+                    <button data-category="21" data-name="Esportes" class="category-btn styled-btn bg-rose-500 hover:bg-rose-600">Esportes</button>
+                </div>
+            </div>
+            
+            <!-- Seleção de Dificuldade -->
+            <div id="difficulty-selection" class="hidden">
+                <h2 class="text-2xl font-semibold mb-4">Escolha um nível de dificuldade:</h2>
+                <div class="flex flex-col md:flex-row gap-4 justify-center">
+                    <button data-difficulty="easy" class="difficulty-btn styled-btn bg-green-600 hover:bg-green-700">Fácil (V/F)</button>
+                    <button data-difficulty="medium" class="difficulty-btn styled-btn bg-yellow-500 hover:bg-yellow-600 text-gray-900">Médio</button>
+                    <button data-difficulty="hard" class="difficulty-btn styled-btn bg-red-600 hover:bg-red-700">Difícil</button>
+                </div>
+            </div>
+
+            <!-- Tela de Carregamento -->
+            <div id="loading-screen" class="hidden">
+                 <div class="loader mx-auto"></div>
+                 <p class="text-xl mt-4 text-gray-300">A buscar e traduzir perguntas...</p>
+            </div>
+
+            <!-- Tela do Quiz -->
+            <div id="quiz-screen" class="hidden">
+                <div id="score" class="text-xl font-bold text-gray-300 mb-4" aria-live="polite">Pontuação: 0</div>
+                <div class="bg-gray-700 p-6 rounded-lg">
+                    <p id="question-text" class="text-2xl font-semibold mb-5" aria-live="assertive"></p>
+                    <div id="options-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-left"></div>
+                </div>
+            </div>
+            
+            <!-- Tela Final -->
+            <div id="end-screen" class="hidden">
+                 <h2 class="text-3xl font-bold text-cyan-400 mb-4">Fim de Jogo!</h2>
+                 <p id="final-score" class="text-2xl mb-6"></p>
+                 <p class="text-lg mb-4">Diga <strong class="text-cyan-400">"jogar novamente"</strong> para voltar ao menu.</p>
+            </div>
+        </main>
+
+        <footer class="mt-8">
+            <div id="status" class="flex items-center justify-center text-gray-500">
+                <div id="status-dot" class="status-dot w-3 h-3 bg-red-500 rounded-full mr-2"></div>
+                <span id="status-text">Aguardando permissão de microfone...</span>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- ELEMENTOS DA UI (sem alterações) ---
+            const permissionModal = document.getElementById('permission-modal');
+            const permissionBtn = document.getElementById('permission-btn');
+            const modalTitle = document.getElementById('modal-title');
+            const modalText = document.getElementById('modal-text');
+            const startBtn = document.getElementById('start-btn');
+            const startScreen = document.getElementById('start-screen');
+            const categorySelectionScreen = document.getElementById('category-selection');
+            const difficultySelectionScreen = document.getElementById('difficulty-selection');
+            const loadingScreen = document.getElementById('loading-screen');
+            const quizScreen = document.getElementById('quiz-screen');
+            const endScreen = document.getElementById('end-screen');
+            const questionText = document.getElementById('question-text');
+            const optionsContainer = document.getElementById('options-container');
+            const scoreDisplay = document.getElementById('score');
+            const finalScoreDisplay = document.getElementById('final-score');
+            const statusText = document.getElementById('status-text');
+            const statusDot = document.getElementById('status-dot');
+            const categoryButtons = document.querySelectorAll('.category-btn');
+            const difficultyButtons = document.querySelectorAll('.difficulty-btn');
+
+            // --- API DE VOZ ---
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            let recognition; 
+
+            const synth = window.speechSynthesis;
+
+            // --- ESTADO DO JOGO ---
+            let currentCategoryId = null;
+            let currentCategoryName = null;
+            let currentDifficulty = null;
+            let currentQuestionIndex = 0;
+            let score = 0;
+            let isListening = false;
+            let gameActive = false;
+            let fetchedQuestions = [];
+
+            // --- LÓGICA DE PERMISSÃO ---
+            permissionBtn.addEventListener('click', async () => {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    permissionModal.classList.add('hidden');
+                    startBtn.disabled = false;
+                    statusText.textContent = 'Microfone pronto! Diga "iniciar jogo".';
+                    initializeSpeechRecognition();
+                } catch (err) {
+                    console.error("Erro ao obter permissão de microfone:", err);
+                    modalTitle.textContent = "Acesso Negado";
+                    modalText.innerHTML = "O microfone é <strong class='text-red-400'>essencial</strong> para este jogo. Por favor, atualize a página e conceda a permissão para jogar.";
+                    permissionBtn.classList.add('hidden');
+                }
+            });
+
+            const initializeSpeechRecognition = () => {
+                if (!SpeechRecognition) {
+                    statusText.textContent = "O seu navegador não suporta reconhecimento de voz.";
+                    return;
+                }
+                recognition = new SpeechRecognition();
+                recognition.lang = 'pt-BR';
+                recognition.continuous = false;
+
+                recognition.onstart = () => {
+                    isListening = true;
+                    statusText.textContent = 'Ouvindo...';
+                    statusDot.classList.remove('bg-red-500');
+                    statusDot.classList.add('bg-cyan-500', 'animate-pulse');
+                };
+                
+                recognition.onend = () => {
+                    isListening = false;
+                    if (!synth.speaking) {
+                        try {
+                            recognition.start();
+                        } catch(e) {
+                            console.error("Falha ao reiniciar o reconhecimento:", e);
+                        }
+                    }
+                };
+                
+                recognition.onerror = (e) => console.error("Erro no reconhecimento de voz:", e.error);
+                
+                recognition.onresult = (e) => {
+                    const command = e.results[0][0].transcript.toLowerCase().trim();
+                    statusText.textContent = `Você disse: "${command}"`;
+                    processCommand(command);
+                };
+
+                recognition.start();
+            };
+
+            // --- FUNÇÃO DE TRADUÇÃO ---
+            const translateText = async (text) => {
+                if (!text) return "";
+                const apiUrl = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=en|pt-br`;
+                try {
+                    const response = await fetch(apiUrl);
+                    const data = await response.json();
+                    return data.responseData.translatedText;
+                } catch (error) {
+                    console.error("Erro na tradução:", error);
+                    return text;
+                }
+            };
+
+            const decodeHtmlEntities = (text) => {
+                const textarea = document.createElement('textarea');
+                textarea.innerHTML = text;
+                return textarea.value;
+            }
+
+            // --- LÓGICA DO QUIZ ---
+            const fetchAndTranslateQuestions = async (categoryId, difficulty) => {
+                // **MUDANÇA AQUI**: Define o tipo de pergunta com base na dificuldade
+                const questionType = difficulty === 'easy' ? 'boolean' : 'multiple';
+                const apiUrl = `https://opentdb.com/api.php?amount=5&category=${categoryId}&difficulty=${difficulty}&type=${questionType}`;
+                
+                try {
+                    const response = await fetch(apiUrl);
+                    const data = await response.json();
+                    
+                    if (data.response_code !== 0) throw new Error('Não foi possível buscar perguntas para esta combinação.');
+
+                    const translatedQuestions = await Promise.all(data.results.map(async (q) => {
+                        const questionText = decodeHtmlEntities(q.question);
+                        
+                        // **MUDANÇA AQUI**: Lida com os dois tipos de resposta
+                        if (questionType === 'boolean') {
+                            const translatedQuestion = await translateText(questionText);
+                            return {
+                                question: translatedQuestion,
+                                options: ["Verdadeiro", "Falso"],
+                                answer: q.correct_answer === "True" ? 0 : 1, // 0 para Verdadeiro, 1 para Falso
+                                type: 'boolean'
+                            };
+                        } else {
+                            const correctAnswer = decodeHtmlEntities(q.correct_answer);
+                            const incorrectAnswers = q.incorrect_answers.map(opt => decodeHtmlEntities(opt));
+
+                            const [translatedQuestion, ...translatedOptions] = await Promise.all([
+                                translateText(questionText),
+                                ...[correctAnswer, ...incorrectAnswers].map(opt => translateText(opt))
+                            ]);
+                            
+                            const translatedCorrectAnswer = translatedOptions[0];
+                            const shuffledOptions = translatedOptions.sort(() => Math.random() - 0.5);
+
+                            return {
+                                question: translatedQuestion,
+                                options: shuffledOptions,
+                                answer: shuffledOptions.indexOf(translatedCorrectAnswer),
+                                type: 'multiple'
+                            };
+                        }
+                    }));
+                    
+                    return translatedQuestions;
+                } catch (error) {
+                    console.error("Falha ao buscar e traduzir perguntas:", error);
+                    return null;
+                }
+            };
+            
+            const speak = (text, callback) => {
+                if (synth.speaking) synth.cancel();
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'pt-BR';
+                utterance.rate = 1.1;
+                utterance.onend = () => { if (callback) callback(); };
+                utterance.onerror = (e) => console.error('Erro na síntese de voz:', e);
+                synth.speak(utterance);
+            };
+
+            const startGame = () => {
+                if (!recognition) return;
+                gameActive = true;
+                startScreen.classList.add('hidden');
+                categorySelectionScreen.classList.remove('hidden');
+                speak("Jogo iniciado. Por favor, escolha uma categoria.", () => {
+                    if (!isListening) recognition.start();
+                });
+            };
+
+            const selectCategory = (categoryId, categoryName) => {
+                currentCategoryId = categoryId;
+                currentCategoryName = categoryName;
+                categorySelectionScreen.classList.add('hidden');
+                difficultySelectionScreen.classList.remove('hidden');
+                speak(`Categoria ${categoryName} selecionada. Agora, escolha a dificuldade: fácil, médio ou difícil.`, () => {
+                    if (!isListening) recognition.start();
+                });
+            };
+
+            const selectDifficulty = async (difficulty) => {
+                currentDifficulty = difficulty;
+                difficultySelectionScreen.classList.add('hidden');
+                loadingScreen.classList.remove('hidden');
+                speak(`Buscando perguntas no nível ${difficulty}.`);
+
+                fetchedQuestions = await fetchAndTranslateQuestions(currentCategoryId, currentDifficulty);
+                
+                loadingScreen.classList.add('hidden');
+
+                if (!fetchedQuestions || fetchedQuestions.length === 0) {
+                    categorySelectionScreen.classList.remove('hidden');
+                    speak("Desculpe, não consegui obter as perguntas. Por favor, escolha outra categoria.", () => {
+                        if (!isListening) recognition.start();
+                    });
+                    return;
+                }
+                
+                score = 0;
+                currentQuestionIndex = 0;
+                scoreDisplay.textContent = `Pontuação: ${score}`;
+                quizScreen.classList.remove('hidden');
+                askQuestion();
+            };
+
+            const askQuestion = () => {
+                if (currentQuestionIndex < fetchedQuestions.length) {
+                    const q = fetchedQuestions[currentQuestionIndex];
+                    questionText.textContent = q.question;
+                    optionsContainer.innerHTML = '';
+                    let questionToSpeak = `Pergunta ${currentQuestionIndex + 1}: ${q.question}.`;
+                    
+                    // **MUDANÇA AQUI**: Lida com a exibição das opções
+                    if (q.type === 'boolean') {
+                        optionsContainer.classList.remove('md:grid-cols-2'); // Usa uma coluna
+                        q.options.forEach((option, index) => {
+                            const optionElement = document.createElement('div');
+                            optionElement.className = 'bg-gray-600 p-4 rounded-lg text-lg text-center';
+                            optionElement.textContent = option;
+                            optionsContainer.appendChild(optionElement);
+                        });
+                        questionToSpeak += ` Responda com verdadeiro ou falso.`;
+                    } else {
+                        optionsContainer.classList.add('md:grid-cols-2'); // Volta para duas colunas
+                        q.options.forEach((option, index) => {
+                            const optionLetter = String.fromCharCode(65 + index);
+                            const optionElement = document.createElement('div');
+                            optionElement.className = 'bg-gray-600 p-4 rounded-lg text-lg';
+                            optionElement.innerHTML = `<strong class="text-cyan-400">${optionLetter}.</strong> ${option}`;
+                            optionsContainer.appendChild(optionElement);
+                            questionToSpeak += ` Opção ${optionLetter}: ${option}.`;
+                        });
+                    }
+                    speak(questionToSpeak, () => { if (!isListening) recognition.start(); });
+                } else {
+                    endGame();
+                }
+            };
+
+            const checkAnswer = (spokenAnswer) => {
+                if (synth.speaking) return;
+                const q = fetchedQuestions[currentQuestionIndex];
+                let selectedOption = -1;
+
+                // **MUDANÇA AQUI**: Lida com os dois tipos de resposta por voz
+                if (q.type === 'boolean') {
+                    if (spokenAnswer.includes('verdadeiro')) selectedOption = 0;
+                    else if (spokenAnswer.includes('falso')) selectedOption = 1;
+                } else {
+                    if (spokenAnswer.includes('opção a') || spokenAnswer.includes('letra a') || spokenAnswer === 'a') selectedOption = 0;
+                    else if (spokenAnswer.includes('opção b') || spokenAnswer.includes('letra b') || spokenAnswer === 'b') selectedOption = 1;
+                    else if (spokenAnswer.includes('opção c') || spokenAnswer.includes('letra c') || spokenAnswer === 'c') selectedOption = 2;
+                    else if (spokenAnswer.includes('opção d') || spokenAnswer.includes('letra d') || spokenAnswer === 'd') selectedOption = 3;
+                }
+                
+                if (selectedOption === -1) {
+                    const feedback = q.type === 'boolean' ? "Por favor, responda com verdadeiro ou falso." : "Por favor, diga 'opção A', 'B', 'C' ou 'D'.";
+                    speak(`Não reconheci essa resposta. ${feedback}`, () => {
+                        if (!isListening) recognition.start();
+                    });
+                    return;
+                }
+
+                const optionElements = optionsContainer.children;
+                if (selectedOption === q.answer) {
+                    score++;
+                    scoreDisplay.textContent = `Pontuação: ${score}`;
+                    optionElements[selectedOption].classList.add('bg-green-500');
+                    speak("Resposta correta!", () => {
+                        currentQuestionIndex++;
+                        setTimeout(askQuestion, 1200);
+                    });
+                } else {
+                    optionElements[selectedOption].classList.add('bg-red-500');
+                    optionElements[q.answer].classList.add('bg-green-500');
+                    const correctAnswerText = q.options[q.answer];
+                    speak(`Incorreto. A resposta certa era ${correctAnswerText}.`, () => {
+                        currentQuestionIndex++;
+                        setTimeout(askQuestion, 2500);
+                    });
+                }
+            };
+
+            const endGame = () => {
+                quizScreen.classList.add('hidden');
+                endScreen.classList.remove('hidden');
+                const resultText = `Você acertou ${score} de ${fetchedQuestions.length} perguntas.`;
+                finalScoreDisplay.textContent = resultText;
+                speak(`Fim do quiz! ${resultText} Para jogar novamente, diga "jogar novamente".`, () => {
+                    if (!isListening) recognition.start();
+                });
+            };
+
+            const resetGame = () => {
+                endScreen.classList.add('hidden');
+                currentCategoryId = null;
+                currentCategoryName = null;
+                currentDifficulty = null;
+                gameActive = false; 
+                categorySelectionScreen.classList.remove('hidden');
+                speak("Escolha uma nova categoria.", () => { if (!isListening) recognition.start(); });
+            };
+
+            const processCommand = (command) => {
+                if (synth.speaking) return;
+
+                let commandRecognized = false;
+
+                if (!gameActive) {
+                    if (!startBtn.disabled && command.includes('iniciar jogo')) {
+                        startGame();
+                    }
+                    return;
+                }
+                
+                if (currentCategoryName === null) {
+                    categoryButtons.forEach(button => {
+                        if (command.includes(button.dataset.name.toLowerCase())) {
+                            selectCategory(button.dataset.category, button.dataset.name);
+                            commandRecognized = true;
+                        }
+                    });
+                    if (!commandRecognized) {
+                        speak("Não entendi. Por favor, escolha uma das categorias disponíveis.", () => {
+                            if (!isListening) recognition.start();
+                        });
+                    }
+                    return;
+                }
+                
+                if (currentDifficulty === null) {
+                    if(command.includes('fácil')) { selectDifficulty('easy'); commandRecognized = true; }
+                    else if(command.includes('médio')) { selectDifficulty('medium'); commandRecognized = true; }
+                    else if(command.includes('difícil')) { selectDifficulty('hard'); commandRecognized = true; }
+                    
+                    if (!commandRecognized) {
+                        speak("Não entendi. Por favor, escolha a dificuldade: fácil, médio ou difícil.", () => {
+                            if (!isListening) recognition.start();
+                        });
+                    }
+                    return;
+                }
+                
+                if (!quizScreen.classList.contains('hidden')) {
+                   checkAnswer(command);
+                   return;
+                }
+                
+                if (!endScreen.classList.contains('hidden')) {
+                    if (command.includes('jogar novamente')) {
+                        resetGame();
+                        commandRecognized = true;
+                    }
+                    if (!commandRecognized) {
+                        speak("Não entendi. Diga 'jogar novamente' para recomeçar.", () => {
+                            if (!isListening) recognition.start();
+                        });
+                    }
+                }
+            };
+
+            startBtn.addEventListener('click', startGame);
+            categoryButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    if (!gameActive) gameActive = true;
+                    selectCategory(button.dataset.category, button.dataset.name);
+                });
+            });
+            difficultyButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    selectDifficulty(button.dataset.difficulty);
+                });
+            });
+        });
+    </script>
+</body>
+</html>
+

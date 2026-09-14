@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Rush - Jogo de Foco</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .key-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 6px;
+            background-color: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+        #game-board.correct {
+            animation: flash-green 0.3s ease-out;
+        }
+        #game-board.incorrect {
+            animation: shake 0.5s ease-in-out, flash-red 0.5s ease-in-out;
+        }
+
+        @keyframes flash-green {
+            0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+            50% { box-shadow: 0 0 25px 10px rgba(74, 222, 128, 0.7); }
+            100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+        }
+        
+        @keyframes flash-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+            50% { box-shadow: 0 0 25px 10px rgba(239, 68, 68, 0.7); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-10px); }
+            20%, 40%, 60%, 80% { transform: translateX(10px); }
+        }
+         /* Estilos para os novos elementos (modal) */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 40;
+        }
+        .modal-content {
+            z-index: 50;
+            background-color: #1f2937;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex items-center justify-center min-h-screen">
+
+    <div id="game-container" class="w-full max-w-md mx-auto p-4">
+        
+        <!-- Ecrã Inicial -->
+        <div id="start-screen" class="text-center">
+            <h1 class="text-5xl font-black text-white mb-2">Color Rush</h1>
+            <p class="text-lg text-gray-400 mb-4">Selecione um nível de dificuldade.</p>
+            <div class="space-y-4 mb-6">
+                 <button data-difficulty="easy" class="difficulty-btn w-full bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-6 rounded-lg text-xl transition-transform transform hover:scale-105">
+                    Fácil
+                </button>
+                 <button data-difficulty="medium" class="difficulty-btn w-full bg-yellow-500 hover:bg-yellow-400 text-white font-bold py-3 px-6 rounded-lg text-xl transition-transform transform hover:scale-105">
+                    Médio
+                </button>
+                 <button data-difficulty="hard" class="difficulty-btn w-full bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-6 rounded-lg text-xl transition-transform transform hover:scale-105">
+                    Difícil
+                </button>
+            </div>
+            <input type="text" id="player-name-input" placeholder="SEU NOME" maxlength="10" class="w-full max-w-xs mx-auto p-3 text-center bg-gray-700 border-2 border-gray-600 rounded-lg text-white uppercase tracking-widest mb-4 focus:outline-none focus:border-cyan-400">
+             <button id="start-game-button" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-4 rounded-lg shadow-md disabled:opacity-50" disabled>
+                A Ligar...
+            </button>
+        </div>
+
+        <!-- Tabuleiro do Jogo (escondido inicialmente) -->
+        <div id="game-board" class="hidden bg-gray-800 p-6 sm:p-8 rounded-2xl shadow-2xl transition-all duration-300">
+            <div class="flex justify-between items-center mb-6">
+                <div class="text-lg font-bold">PONTUAÇÃO: <span id="score" class="text-green-400">0</span></div>
+                <div class="text-sm font-bold text-gray-400">JOGADOR: <span id="player-display" class="text-white"></span></div>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-4 mb-8 overflow-hidden">
+                <div id="timer-bar" class="bg-green-500 h-full rounded-full transition-all duration-100 ease-linear"></div>
+            </div>
+            <div class="mb-8 text-center">
+                <p id="color-word" class="text-6xl font-black uppercase" style="transition: color 0.2s;"></p>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div id="btn-vermelho" class="flex flex-col items-center justify-center bg-red-500/80 p-4 rounded-lg cursor-pointer hover:bg-red-500 transition-all">
+                    <div class="key-icon mb-2">↑</div>
+                    <span class="font-bold">VERMELHO</span>
+                </div>
+                <div id="btn-azul" class="flex flex-col items-center justify-center bg-blue-500/80 p-4 rounded-lg cursor-pointer hover:bg-blue-500 transition-all">
+                    <div class="key-icon mb-2">↓</div>
+                     <span class="font-bold">AZUL</span>
+                </div>
+                <div id="btn-amarelo" class="flex flex-col items-center justify-center bg-yellow-400/80 text-gray-900 p-4 rounded-lg cursor-pointer hover:bg-yellow-400 transition-all">
+                     <div class="key-icon mb-2" style="background-color: rgba(0,0,0,0.1); border-color: rgba(0,0,0,0.2);">←</div>
+                     <span class="font-bold">AMARELO</span>
+                </div>
+                <div id="btn-verde" class="flex flex-col items-center justify-center bg-green-500/80 p-4 rounded-lg cursor-pointer hover:bg-green-500 transition-all">
+                     <div class="key-icon mb-2">→</div>
+                     <span class="font-bold">VERDE</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Ecrã de Fim de Jogo (escondido inicialmente) -->
+        <div id="game-over-screen" class="hidden text-center">
+             <h2 class="text-4xl font-black text-red-500 mb-2">Fim de Jogo!</h2>
+             <p class="text-xl text-gray-300 mb-1">A sua pontuação final foi:</p>
+             <p id="final-score" class="text-7xl font-bold text-green-400 mb-4"></p>
+             <p class="text-md text-gray-400 mb-6">Nível: <span id="final-difficulty" class="font-semibold"></span></p>
+             <button id="restart-button" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-6 rounded-lg text-xl transition-transform transform hover:scale-105">
+                Voltar ao Início
+            </button>
+             <button id="leaderboard-btn" class="mt-4 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg text-xl transition-transform transform hover:scale-105">
+                Ver Recordes
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal do Ranking -->
+    <div id="leaderboard-modal" class="hidden fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content rounded-lg shadow-xl p-6 w-full max-w-md max-h-[80vh] flex flex-col">
+            <h3 id="leaderboard-title" class="text-2xl font-bold text-center text-cyan-400 mb-4">RANKING</h3>
+            <div id="leaderboard-content" class="overflow-y-auto text-sm">
+                 <p id="leaderboard-loading" class="text-center text-gray-400">A carregar recordes...</p>
+            </div>
+            <div class="mt-6 text-center">
+                <button id="close-leaderboard-button" class="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- Importações do Firebase ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getDatabase, ref, push, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+        // --- Elementos do DOM ---
+        const startScreen = document.getElementById('start-screen');
+        const gameBoard = document.getElementById('game-board');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const restartButton = document.getElementById('restart-button');
+        const scoreEl = document.getElementById('score');
+        const finalScoreEl = document.getElementById('final-score');
+        const finalDifficultyEl = document.getElementById('final-difficulty');
+        const timerBar = document.getElementById('timer-bar');
+        const colorWordEl = document.getElementById('color-word');
+        const btnVermelho = document.getElementById('btn-vermelho');
+        const btnAzul = document.getElementById('btn-azul');
+        const btnAmarelo = document.getElementById('btn-amarelo');
+        const btnVerde = document.getElementById('btn-verde');
+        const playerNameInput = document.getElementById('player-name-input');
+        const playerDisplay = document.getElementById('player-display');
+        const leaderboardBtn = document.getElementById('leaderboard-btn');
+        const leaderboardModal = document.getElementById('leaderboard-modal');
+        const leaderboardContent = document.getElementById('leaderboard-content');
+        const leaderboardLoading = document.getElementById('leaderboard-loading');
+        const leaderboardTitle = document.getElementById('leaderboard-title');
+        const closeLeaderboardButton = document.getElementById('close-leaderboard-button');
+
+        // --- Configurações do Jogo ---
+        const colors = [
+            { name: 'vermelho', code: '#ef4444', key: 'ArrowUp' },
+            { name: 'azul', code: '#3b82f6', key: 'ArrowDown' },
+            { name: 'verde', code: '#22c55e', key: 'ArrowRight' },
+            { name: 'amarelo', code: '#facc15', key: 'ArrowLeft' }
+        ];
+        
+        const difficultySettings = {
+            easy: { name: 'Fácil', time: 4000, reduction: 30, allowMatch: false },
+            medium: { name: 'Médio', time: 3000, reduction: 50, allowMatch: false },
+            hard: { name: 'Difícil', time: 2200, reduction: 75, allowMatch: true }
+        };
+
+        let score = 0, currentCorrectColor, currentDifficulty, timerInterval, timeLeft = 100, gameActive = false, timeLimit;
+        let playerName = 'ANONIMO';
+        let selectedDifficultyKey = 'medium';
+
+        // --- Configuração do Firebase ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyDBTrsQWc6GPq5R0Ai2KmPki3hpHbg4c6g",
+          authDomain: "joga-cobrinha.firebaseapp.com",
+          projectId: "joga-cobrinha",
+          storageBucket: "joga-cobrinha.appspot.com",
+          messagingSenderId: "849126304274",
+          appId: "1:849126304274:web:e6855f68bd06e33e9686cb"
+        };
+        let db;
+        
+        // --- Funções Principais do Jogo ---
+
+        function startGame() {
+            currentDifficulty = difficultySettings[selectedDifficultyKey];
+            timeLimit = currentDifficulty.time;
+            
+            const nameInput = playerNameInput.value.trim().toUpperCase();
+            if (nameInput) playerName = nameInput;
+            playerDisplay.textContent = playerName;
+
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            gameBoard.classList.remove('hidden');
+
+            score = 0;
+            scoreEl.textContent = '0';
+            gameActive = true;
+
+            nextRound();
+        }
+        
+        function nextRound() {
+            if (!gameActive) return;
+
+            clearInterval(timerInterval);
+            timeLeft = 100;
+            timerBar.style.width = '100%';
+            timerBar.classList.remove('bg-yellow-500', 'bg-red-500');
+            timerBar.classList.add('bg-green-500');
+            
+            const wordColorIndex = Math.floor(Math.random() * colors.length);
+            let textColorIndex = Math.floor(Math.random() * colors.length);
+            
+            if (!currentDifficulty.allowMatch) {
+                while (wordColorIndex === textColorIndex) {
+                    textColorIndex = Math.floor(Math.random() * colors.length);
+                }
+            }
+            
+            currentCorrectColor = colors[wordColorIndex];
+            const displayColor = colors[textColorIndex];
+
+            colorWordEl.textContent = currentCorrectColor.name;
+            colorWordEl.style.color = displayColor.code;
+            
+            const startTime = Date.now();
+            timerInterval = setInterval(() => {
+                const elapsedTime = Date.now() - startTime;
+                timeLeft = ((timeLimit - elapsedTime) / timeLimit) * 100;
+                
+                if (timeLeft <= 0) {
+                    endGame();
+                } else {
+                    updateTimerBar();
+                }
+            }, 10);
+        }
+
+        function updateTimerBar() {
+            timerBar.style.width = `${timeLeft}%`;
+            if (timeLeft < 25) {
+                timerBar.classList.remove('bg-green-500', 'bg-yellow-500');
+                timerBar.classList.add('bg-red-500');
+            } else if (timeLeft < 50) {
+                timerBar.classList.remove('bg-green-500');
+                timerBar.classList.add('bg-yellow-500');
+            }
+        }
+        
+        function checkAnswer(pressedKey) {
+            if (!gameActive) return;
+            
+            const chosenColor = colors.find(c => c.key === pressedKey);
+
+            if (chosenColor && chosenColor.name === currentCorrectColor.name) {
+                score++;
+                scoreEl.textContent = score;
+                timeLimit = Math.max(800, currentDifficulty.time - score * currentDifficulty.reduction);
+
+                gameBoard.classList.add('correct');
+                setTimeout(() => gameBoard.classList.remove('correct'), 300);
+
+                nextRound();
+            } else {
+                gameBoard.classList.add('incorrect');
+                setTimeout(() => gameBoard.classList.remove('incorrect'), 500);
+                endGame();
+            }
+        }
+
+        function endGame() {
+            gameActive = false;
+            clearInterval(timerInterval);
+            
+            gameBoard.classList.add('hidden');
+            gameOverScreen.classList.remove('hidden');
+            
+            finalScoreEl.textContent = score;
+            finalDifficultyEl.textContent = currentDifficulty.name;
+            saveScore(playerName, score, selectedDifficultyKey);
+        }
+        
+        // --- Funções de Recorde ---
+        async function initializeFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getDatabase(app);
+                const auth = getAuth(app);
+                await signInAnonymously(auth);
+                document.getElementById('start-game-button').disabled = false;
+                document.getElementById('start-game-button').textContent = "Iniciar Jogo";
+            } catch (error) { 
+                document.getElementById('start-game-button').textContent = "Erro de Conexão";
+                console.error("Erro ao inicializar o Firebase:", error); 
+            }
+        }
+
+        function saveScore(name, scoreValue, difficulty) {
+            if (!db || scoreValue === 0) return;
+            const leaderboardRef = ref(db, `public/leaderboard-colorrush-${difficulty}`);
+            push(leaderboardRef, {
+                name: name,
+                score: scoreValue,
+                timestamp: serverTimestamp()
+            }).catch(error => console.error("Erro ao salvar placar:", error));
+        }
+
+        function listenForLeaderboardUpdates(difficulty) {
+            const leaderboardRef = ref(db, `public/leaderboard-colorrush-${difficulty}`);
+            onValue(leaderboardRef, (snapshot) => {
+                const scoresData = snapshot.val();
+                const allScores = [];
+                if (scoresData) {
+                    for (const key in scoresData) {
+                        allScores.push({ id: key, ...scoresData[key] });
+                    }
+                }
+
+                const bestScores = new Map();
+                allScores.forEach(s => {
+                    const existingScore = bestScores.get(s.name);
+                    if (!existingScore || s.score > existingScore.score) {
+                        bestScores.set(s.name, s);
+                    }
+                });
+
+                const uniqueBestScores = Array.from(bestScores.values());
+                uniqueBestScores.sort((a, b) => b.score - a.score);
+                
+                renderLeaderboard(uniqueBestScores, difficulty);
+            });
+        }
+
+        function renderLeaderboard(scores, difficulty) {
+            leaderboardTitle.textContent = `Ranking - ${difficultySettings[difficulty].name}`;
+            leaderboardLoading.classList.add('hidden');
+            if (scores.length === 0) {
+                leaderboardContent.innerHTML = '<p class="text-center text-gray-400">Nenhum recorde ainda.</p>';
+                return;
+            }
+            let tableHTML = `<table class="w-full text-left"><thead class="text-xs text-cyan-400 uppercase"><tr><th class="px-2 py-2">#</th><th class="px-4 py-2">Nome</th><th class="px-4 py-2 text-right">Pontos</th></tr></thead><tbody>`;
+            scores.slice(0, 20).forEach((s, index) => {
+                tableHTML += `<tr class="border-b border-gray-700"><td class="px-2 py-2 font-bold">${index + 1}</td><td class="px-4 py-2">${s.name}</td><td class="px-4 py-2 text-right font-bold">${s.score}</td></tr>`;
+            });
+            tableHTML += '</tbody></table>';
+            leaderboardContent.innerHTML = tableHTML;
+        }
+
+
+        // --- Event Listeners ---
+        document.querySelectorAll('.difficulty-btn').forEach(button => {
+            button.addEventListener('click', () => {
+                selectedDifficultyKey = button.dataset.difficulty;
+                startGame();
+            });
+        });
+        
+        restartButton.addEventListener('click', () => {
+            gameOverScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+        });
+        
+        leaderboardBtn.addEventListener('click', () => {
+            listenForLeaderboardUpdates(selectedDifficultyKey);
+            leaderboardModal.classList.remove('hidden');
+        });
+        closeLeaderboardButton.addEventListener('click', () => leaderboardModal.classList.add('hidden'));
+
+        btnVermelho.addEventListener('click', () => checkAnswer('ArrowUp'));
+        btnAzul.addEventListener('click', () => checkAnswer('ArrowDown'));
+        btnAmarelo.addEventListener('click', () => checkAnswer('ArrowLeft'));
+        btnVerde.addEventListener('click', () => checkAnswer('ArrowRight'));
+
+        window.addEventListener('keydown', (e) => {
+            if (gameActive && ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {
+                e.preventDefault(); 
+                checkAnswer(e.key);
+            }
+        });
+        
+        // --- Início ---
+        window.onload = () => {
+            initializeFirebase();
+        };
+
+    </script>
+</body>
+</html>

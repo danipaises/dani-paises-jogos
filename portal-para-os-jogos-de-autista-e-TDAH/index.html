@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-W9QXMVRL6L"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-W9QXMVRL6L');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Jogos para Deficientes e Transtornos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-image: url('https://images.unsplash.com/photo-1534796636912-3b95b3ab5986?q=80&w=2071&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }
+        .link-button {
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            will-change: transform;
+        }
+        .link-button:hover {
+            transform: scale(1.03);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+        /* Estilo para o botão de filtro ativo */
+        .filter-btn.active {
+            background-color: #4f46e5; /* indigo-600 */
+            font-weight: 700;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        }
+        /* Transição suave para os links dos jogos ao filtrar */
+        .game-link {
+            transition: all 0.3s ease-in-out;
+        }
+    </style>
+</head>
+<body class="text-white">
+
+    <main class="min-h-screen w-full flex items-center justify-center p-4">
+        
+        <!-- Card Central -->
+        <div class="w-full max-w-md bg-gray-800 bg-opacity-70 backdrop-blur-lg rounded-2xl p-6 md:p-8 text-center shadow-2xl">
+            
+            <!-- Título e Descrição -->
+            <h1 class="text-3xl font-bold text-white mb-1 mt-4">Portal de Jogos</h1>
+            <p class="text-blue-200 mb-6">Links de jogos e atividades inclusivas</p>
+
+            <!-- Biografia/Sobre -->
+            <div class="bg-black bg-opacity-20 rounded-lg p-3 mb-6 text-left">
+                <h2 class="font-bold text-yellow-300 text-sm mb-1">SOBRE ESTE ESPAÇO</h2>
+                <p class="text-gray-200 text-sm">
+                    Este é um portal com links para jogos e atividades que estimulam o desenvolvimento, a criatividade e a comunicação de forma divertida.
+                </p>
+            </div>
+
+            <!-- Botões de Filtro (Tags) -->
+            <div id="filter-container" class="flex flex-wrap justify-center gap-2 mb-8">
+                <button class="filter-btn active text-white py-1.5 px-4 rounded-full text-sm transition-all duration-200" data-filter="all">Todos</button>
+                <button class="filter-btn bg-gray-600 hover:bg-indigo-500 text-white py-1.5 px-4 rounded-full text-sm transition-all duration-200" data-filter="autismo">Autismo</button>
+                <button class="filter-btn bg-gray-600 hover:bg-indigo-500 text-white py-1.5 px-4 rounded-full text-sm transition-all duration-200" data-filter="tdah">TDAH</button>
+                <button class="filter-btn bg-gray-600 hover:bg-indigo-500 text-white py-1.5 px-4 rounded-full text-sm transition-all duration-200" data-filter="visual">Def. Visual</button>
+                <button class="filter-btn bg-gray-600 hover:bg-indigo-500 text-white py-1.5 px-4 rounded-full text-sm transition-all duration-200" data-filter="down">S. de Down</button>
+            </div>
+
+
+            <!-- Botões de Links -->
+            <div class="flex flex-col space-y-4">
+                <!-- Jogos filtráveis -->
+                <a href="https://danipaises.com.br/Adivinhando-emocoes/index.html" target="_blank" class="game-link link-button bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-4 rounded-lg w-full block" data-tags="autismo">
+                    Adivinhando Emoções
+                </a>
+                <a href="https://danipaises.com.br/Foco-r-pido/index.html" target="_blank" class="game-link link-button bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg w-full block" data-tags="tdah">
+                    Foco Rápido
+                </a>
+                <a href="https://danipaises.com.br/Conecta-emo-es/index.html" target="_blank" class="game-link link-button bg-teal-500 hover:bg-teal-600 text-white font-bold py-3 px-4 rounded-lg w-full block" data-tags="autismo">
+                    Conecta Emoções
+                </a>
+                <a href="https://danipaises.com.br/Color-Rush-TDAH/index.html" target="_blank" class="game-link link-button bg-orange-500 hover:bg-orange-600 text-white font-bold py-3 px-4 rounded-lg w-full block" data-tags="tdah">
+                    Color Rush
+                </a>
+                <a href="https://danipaises.com.br/quiz%20de%20voz%20(deficiente%20visual)/index.html" target="_blank" class="game-link link-button bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg w-full block" data-tags="visual">
+                    Quiz de Voz
+                </a>
+                <a href="https://danipaises.com.br/jogo-das-cores-e-formatos-(s%C3%ADndrome-de-down-e-tea)/" target="_blank" class="game-link link-button bg-pink-500 hover:bg-pink-600 text-white font-bold py-3 px-4 rounded-lg w-full block" data-tags="down autismo">
+                    Jogo das Cores e Formatos
+                </a>
+                
+                <!-- Links fixos -->
+                <hr class="border-gray-600 my-2"/>
+                <a href="https://www.vakinha.com.br/5684380" target="_blank" class="link-button bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-3 px-4 rounded-lg w-full block">
+                    Apoie o Projeto
+                </a>
+                <a href="https://danipaises.com.br/" target="_blank" class="link-button bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-4 rounded-lg w-full block">
+                    Site do criador
+                </a>
+            </div>
+
+            <!-- Rodapé -->
+            <footer class="mt-8 text-center text-gray-400 text-xs">
+                    <p>&reg;2025 Dani paises. Criado com carinho.</p>
+            </footer>
+
+        </div>
+    </main>
+
+    <script>
+        // Adiciona a funcionalidade de filtro quando o conteúdo da página for carregado
+        document.addEventListener('DOMContentLoaded', () => {
+            const filterContainer = document.getElementById('filter-container');
+            const filterButtons = filterContainer.querySelectorAll('.filter-btn');
+            const gameLinks = document.querySelectorAll('.game-link');
+
+            // Define o estado inicial do botão "Todos"
+            const allButton = filterContainer.querySelector('[data-filter="all"]');
+            allButton.classList.add('active');
+            allButton.classList.remove('bg-gray-600', 'hover:bg-indigo-500');
+
+            // Adiciona um ouvinte de evento ao container dos botões
+            filterContainer.addEventListener('click', (event) => {
+                const clickedButton = event.target.closest('.filter-btn');
+                // Se o clique não foi em um botão, não faz nada
+                if (!clickedButton) return;
+
+                // Atualiza a aparência dos botões para indicar qual está ativo
+                filterButtons.forEach(btn => {
+                    btn.classList.remove('active');
+                    btn.classList.add('bg-gray-600', 'hover:bg-indigo-500');
+                });
+                clickedButton.classList.add('active');
+                clickedButton.classList.remove('bg-gray-600', 'hover:bg-indigo-500');
+
+                const filter = clickedButton.dataset.filter;
+
+                // Itera sobre cada link de jogo para mostrar ou esconder
+                gameLinks.forEach(link => {
+                    const tags = link.dataset.tags;
+                    // Mostra o link se o filtro for "todos" ou se as tags do link incluírem o filtro selecionado
+                    if (filter === 'all' || (tags && tags.split(' ').includes(filter))) {
+                        link.classList.remove('hidden');
+                    } else {
+                        link.classList.add('hidden');
+                    }
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>
+

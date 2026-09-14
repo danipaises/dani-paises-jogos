@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Foco Rápido - Jogo de Atenção</title>
+    
+    <!-- Tailwind CSS para estilização rápida e responsiva -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Google Fonts para uma aparência mais moderna -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Tone.js para feedback sonoro sem arquivos de áudio -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+
+    <style>
+        /* Estilos personalizados para complementar o Tailwind */
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: manipulation; /* Melhora a resposta ao toque em dispositivos móveis */
+        }
+        #game-area {
+            cursor: crosshair;
+            overflow: hidden; /* Garante que o alvo não saia da área de jogo */
+        }
+        #target {
+            /* Transição suave para movimento e mudança de cor */
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+            border: 2px solid rgba(255, 255, 255, 0.7);
+        }
+        /* Efeito de "pulsar" para o botão de iniciar */
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+        .btn-pulse {
+            animation: pulse 2s infinite;
+        }
+         /* Estilos para os novos elementos (modal) */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 40;
+        }
+        .modal-content {
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-2xl text-center">
+        <!-- Cabeçalho com o título do jogo -->
+        <header class="mb-4">
+            <h1 class="text-4xl md:text-5xl font-bold text-cyan-400">Foco Rápido</h1>
+            <p id="subtitle" class="text-gray-400 mt-2 text-lg">Clique no alvo o mais rápido que puder!</p>
+        </header>
+
+        <!-- TELA DE INÍCIO -->
+        <div id="start-screen" class="bg-gray-800 p-6 rounded-lg shadow-lg">
+             <p class="text-gray-300 mb-4">Digite seu nome para salvar seu recorde!</p>
+             <input type="text" id="player-name-input" placeholder="SEU NOME" maxlength="10" class="w-full max-w-xs mx-auto p-3 text-center bg-gray-700 border-2 border-gray-600 rounded-lg text-white uppercase tracking-widest mb-4 focus:outline-none focus:border-cyan-400">
+             <button id="start-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-8 rounded-lg text-xl shadow-md transition-transform transform hover:scale-105 btn-pulse disabled:opacity-50 disabled:animate-none" disabled>
+                A Ligar...
+            </button>
+        </div>
+
+        <!-- TELA DO JOGO (Escondida inicialmente) -->
+        <div id="game-container" class="hidden">
+            <!-- Painel de status do jogo: Placar e Tempo -->
+            <div class="flex justify-around bg-gray-800 p-4 rounded-lg shadow-lg mb-4 text-2xl">
+                <div>
+                    <span class="font-semibold text-yellow-400">Placar:</span>
+                    <span id="score" class="font-bold">0</span>
+                </div>
+                <div>
+                    <span class="font-semibold text-gray-400 text-base">Jogador: <span id="player-display" class="font-bold"></span></span>
+                </div>
+                <div>
+                    <span class="font-semibold text-red-400">Tempo:</span>
+                    <span id="time" class="font-bold">30</span>
+                </div>
+            </div>
+
+            <!-- Área principal do jogo -->
+            <div id="game-area" class="relative w-full h-80 md:h-96 bg-gray-800/50 rounded-lg border-2 border-gray-700 shadow-inner">
+                <!-- O alvo que o jogador deve clicar -->
+                <div id="target" class="absolute w-16 h-16 rounded-full bg-cyan-500" style="display: none;"></div>
+                <!-- Mensagem exibida depois do jogo -->
+                <div id="message-box" class="absolute inset-0 flex-col items-center justify-center bg-gray-900/80 hidden">
+                     <p id="message" class="text-3xl font-bold text-white"></p>
+                     <p id="final-score-message" class="text-xl mt-2 text-yellow-400"></p>
+                     <div class="mt-6 flex space-x-4">
+                        <button id="restart-btn" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-md transition-transform transform hover:scale-105">
+                            Jogar Novamente
+                        </button>
+                        <button id="leaderboard-btn" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-md transition-transform transform hover:scale-105">
+                            Ver Recordes
+                        </button>
+                     </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Rodapé -->
+        <footer class="mt-8 text-sm text-gray-500">
+            <p>Criado para ajudar a exercitar o foco e a atenção.</p>
+        </footer>
+    </div>
+
+    <!-- Modal do Ranking -->
+    <div id="leaderboard-modal" class="hidden fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content bg-gray-800 text-white rounded-lg shadow-xl p-6 w-full max-w-md max-h-[80vh] flex flex-col">
+            <h3 class="text-2xl font-bold text-center text-cyan-400 mb-4">RANKING - FOCO RÁPIDO</h3>
+            <div id="leaderboard-content" class="overflow-y-auto text-sm">
+                 <p id="leaderboard-loading" class="text-center text-gray-400">A carregar recordes...</p>
+            </div>
+            <div class="mt-6 text-center">
+                <button id="close-leaderboard-button" class="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- Importações do Firebase ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getDatabase, ref, push, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+        // --- Elementos do DOM ---
+        const scoreEl = document.getElementById('score');
+        const timeEl = document.getElementById('time');
+        const gameArea = document.getElementById('game-area');
+        const target = document.getElementById('target');
+        const message = document.getElementById('message');
+        const messageBox = document.getElementById('message-box');
+        const finalScoreMessage = document.getElementById('final-score-message');
+        
+        const startScreen = document.getElementById('start-screen');
+        const gameContainer = document.getElementById('game-container');
+        const playerNameInput = document.getElementById('player-name-input');
+        const playerDisplay = document.getElementById('player-display');
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const leaderboardBtn = document.getElementById('leaderboard-btn');
+        const leaderboardModal = document.getElementById('leaderboard-modal');
+        const leaderboardContent = document.getElementById('leaderboard-content');
+        const leaderboardLoading = document.getElementById('leaderboard-loading');
+        const closeLeaderboardButton = document.getElementById('close-leaderboard-button');
+
+        // --- Configuração do Firebase ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyDBTrsQWc6GPq5R0Ai2KmPki3hpHbg4c6g",
+          authDomain: "joga-cobrinha.firebaseapp.com",
+          projectId: "joga-cobrinha",
+          storageBucket: "joga-cobrinha.appspot.com",
+          messagingSenderId: "849126304274",
+          appId: "1:849126304274:web:e6855f68bd06e33e9686cb"
+        };
+        let db;
+        const LEADERBOARD_PATH = 'public/leaderboard-focorapido';
+
+        // --- Variáveis do Jogo ---
+        let score = 0;
+        let timeLeft = 30;
+        const GAME_DURATION = 30;
+        let timerInterval = null;
+        let isPlaying = false;
+        let playerName = 'ANONIMO';
+        
+        // --- Sintetizador para Feedback Sonoro ---
+        const synth = new Tone.Synth().toDestination();
+        
+        // --- Funções do Jogo ---
+
+        function startGame() {
+            if (isPlaying) return;
+            isPlaying = true;
+
+            const nameInput = playerNameInput.value.trim().toUpperCase();
+            if (nameInput) {
+                playerName = nameInput;
+            }
+            playerDisplay.textContent = playerName;
+
+            score = 0;
+            timeLeft = GAME_DURATION;
+            scoreEl.textContent = score;
+            timeEl.textContent = timeLeft;
+
+            startScreen.classList.add('hidden');
+            gameContainer.classList.remove('hidden');
+            messageBox.classList.add('hidden');
+            target.style.display = 'block';
+
+            moveTarget();
+            timerInterval = setInterval(updateTimer, 1000);
+            
+            Tone.context.resume().then(() => {
+                synth.triggerAttackRelease("E4", "8n");
+            });
+        }
+
+        function endGame() {
+            isPlaying = false;
+            clearInterval(timerInterval);
+            
+            target.style.display = 'none';
+            message.textContent = `Fim de Jogo!`;
+            finalScoreMessage.textContent = `Seu placar: ${score}`;
+            messageBox.style.display = 'flex';
+            
+            saveScore(playerName, score);
+            
+            synth.triggerAttackRelease("C3", "4n");
+        }
+
+        function updateTimer() {
+            timeLeft--;
+            timeEl.textContent = timeLeft;
+            if (timeLeft <= 0) {
+                endGame();
+            }
+        }
+
+        function moveTarget() {
+            if (!isPlaying) return;
+            const gameAreaRect = gameArea.getBoundingClientRect();
+            const targetSize = target.offsetWidth;
+            const randomX = Math.random() * (gameAreaRect.width - targetSize);
+            const randomY = Math.random() * (gameAreaRect.height - targetSize);
+            
+            target.style.left = `${randomX}px`;
+            target.style.top = `${randomY}px`;
+            
+            const randomColor = `hsl(${Math.random() * 360}, 80%, 60%)`;
+            target.style.backgroundColor = randomColor;
+        }
+
+        function handleTargetClick() {
+            if (!isPlaying) return;
+            
+            score++;
+            scoreEl.textContent = score;
+            
+            synth.triggerAttackRelease("C5", "16n");
+            
+            target.style.transform = 'scale(0.9)';
+            setTimeout(() => {
+                target.style.transform = 'scale(1)';
+                moveTarget();
+            }, 100);
+        }
+
+        // --- Funções de Recorde ---
+
+        async function initializeFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getDatabase(app);
+                const auth = getAuth(app);
+                await signInAnonymously(auth);
+                startBtn.disabled = false;
+                startBtn.textContent = "Começar!";
+                listenForLeaderboardUpdates();
+            } catch (error) { 
+                startBtn.textContent = "Erro de Conexão";
+                console.error("Erro ao inicializar o Firebase:", error); 
+            }
+        }
+
+        function saveScore(name, score) {
+            if (!db || score === 0) return;
+            const leaderboardRef = ref(db, LEADERBOARD_PATH);
+            push(leaderboardRef, {
+                name: name,
+                score: score,
+                timestamp: serverTimestamp()
+            }).catch(error => console.error("Erro ao salvar placar:", error));
+        }
+
+        function listenForLeaderboardUpdates() {
+            const leaderboardRef = ref(db, LEADERBOARD_PATH);
+            onValue(leaderboardRef, (snapshot) => {
+                const scoresData = snapshot.val();
+                const allScores = [];
+                if (scoresData) {
+                    for (const key in scoresData) {
+                        allScores.push({ id: key, ...scoresData[key] });
+                    }
+                }
+
+                const bestScores = new Map();
+                allScores.forEach(score => {
+                    const existingScore = bestScores.get(score.name);
+                    if (!existingScore || score.score > existingScore.score) {
+                        bestScores.set(score.name, score);
+                    }
+                });
+
+                const uniqueBestScores = Array.from(bestScores.values());
+                uniqueBestScores.sort((a, b) => b.score - a.score);
+                
+                renderLeaderboard(uniqueBestScores);
+            });
+        }
+
+        function renderLeaderboard(scores) {
+            leaderboardLoading.classList.add('hidden');
+            if (scores.length === 0) {
+                leaderboardContent.innerHTML = '<p class="text-center text-gray-400">Nenhum recorde ainda. Seja o primeiro!</p>';
+                return;
+            }
+            let tableHTML = `<table class="w-full text-left"><thead class="text-xs text-cyan-400 uppercase"><tr><th class="px-2 py-2">#</th><th class="px-4 py-2">Nome</th><th class="px-4 py-2 text-right">Placar</th></tr></thead><tbody>`;
+            scores.slice(0, 20).forEach((s, index) => {
+                tableHTML += `<tr class="border-b border-gray-700"><td class="px-2 py-2 font-bold">${index + 1}</td><td class="px-4 py-2">${s.name}</td><td class="px-4 py-2 text-right font-bold">${s.score}</td></tr>`;
+            });
+            tableHTML += '</tbody></table>';
+            leaderboardContent.innerHTML = tableHTML;
+        }
+
+        // --- Event Listeners ---
+        startBtn.addEventListener('click', startGame);
+        restartBtn.addEventListener('click', startGame);
+        target.addEventListener('click', handleTargetClick);
+        
+        leaderboardBtn.addEventListener('click', () => leaderboardModal.classList.remove('hidden'));
+        closeLeaderboardButton.addEventListener('click', () => leaderboardModal.classList.add('hidden'));
+        
+        // --- Início ---
+        window.onload = () => {
+            initializeFirebase();
+        };
+    </script>
+
+</body>
+</html>

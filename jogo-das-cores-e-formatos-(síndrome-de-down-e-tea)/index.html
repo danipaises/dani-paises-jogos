@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo: Formas e Cores</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #f8fafc;
+            --text-color: #334155;
+            --panel-bg: #ffffff;
+            --border-color: #cbd5e1;
+            --hover-bg: #dcfce7;
+            --hover-border: #4ade80;
+            --shape-1: #ef4444;
+            --shape-2: #3b82f6;
+            --shape-3: #22c55e;
+            --shape-4: #f97316;
+            --shape-5: #ec4899;
+            --shape-6: #8b5cf6;
+            --shape-7: #14b8a6;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            touch-action: none;
+            overflow-x: hidden;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .shape {
+            width: 80px;
+            height: 80px;
+            cursor: grab;
+            position: absolute;
+            transition: transform 0.2s ease-in-out;
+        }
+        .shape.dragging {
+            cursor: grabbing;
+            transform: scale(1.1);
+            z-index: 1000;
+        }
+        .target {
+            width: 100px;
+            height: 100px;
+            border: 4px dashed var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+        .target.hover {
+            background-color: var(--hover-bg);
+            border-color: var(--hover-border);
+        }
+        .shape-svg {
+            width: 100%;
+            height: 100%;
+        }
+        .target .shape-svg path {
+            fill: #e2e8f0;
+        }
+        #feedback {
+            animation: fadeInOut 2.5s forwards;
+        }
+        @keyframes fadeInOut {
+            0% { opacity: 0; transform: scale(0.8) translateY(20px); }
+            15% { opacity: 1; transform: scale(1.1) translateY(0); }
+            85% { opacity: 1; transform: scale(1.1) translateY(0); }
+            100% { opacity: 0; transform: scale(0.8) translateY(20px); }
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            opacity: 0;
+            animation: fall 3s ease-out forwards;
+        }
+        @keyframes fall {
+            0% { opacity: 1; transform: translateY(0) rotate(0deg); }
+            100% { opacity: 0; transform: translateY(500px) rotate(720deg); }
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-4xl mx-auto">
+        <div class="flex justify-between items-center mb-2">
+             <h2 id="level-display" class="text-2xl font-bold text-slate-500">Nível 1</h2>
+             <button id="settings-button" class="p-2 rounded-full hover:bg-slate-200 transition">
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-slate-500"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+             </button>
+        </div>
+        <h1 class="text-3xl md:text-5xl font-bold text-center mb-6">Formas e Cores</h1>
+        
+        <div id="game-container" class="relative w-full bg-white rounded-2xl shadow-lg p-4 flex flex-col md:flex-row md:items-center md:justify-between" style="background-color: var(--panel-bg); transition: background-color 0.3s;">
+            <div id="shape-source" class="w-full md:w-1/3 h-32 md:h-full flex items-center justify-center mb-4 md:mb-0 border-b-2 md:border-b-0 md:border-r-2" style="border-color: var(--bg-color);"></div>
+            <div id="target-area" class="w-full md:w-2/3 min-h-[250px] md:h-full flex flex-wrap gap-4 items-center justify-center p-2"></div>
+            <div id="feedback-container" class="absolute inset-0 flex items-center justify-center pointer-events-none"></div>
+        </div>
+        
+        <div class="text-center mt-6">
+            <button id="reset-button" class="bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-full text-lg shadow-md transition-transform transform hover:scale-105">
+                Reiniciar Jogo
+            </button>
+        </div>
+    </div>
+
+    <!-- Painel de Configurações (escondido por padrão) -->
+    <div id="settings-panel" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-8 shadow-2xl w-11/12 max-w-md">
+            <h3 class="text-2xl font-bold mb-6 text-center text-slate-700">Temas de Cores</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <button data-theme="vibrant" class="theme-btn p-4 rounded-lg border-4 border-transparent focus:border-blue-500">
+                    <span class="text-lg font-semibold">Vibrante</span>
+                    <div class="flex justify-center mt-2 space-x-1">
+                        <div class="w-6 h-6 rounded-full bg-[#ef4444]"></div>
+                        <div class="w-6 h-6 rounded-full bg-[#3b82f6]"></div>
+                        <div class="w-6 h-6 rounded-full bg-[#22c55e]"></div>
+                    </div>
+                </button>
+                <button data-theme="pastel" class="theme-btn p-4 rounded-lg border-4 border-transparent focus:border-blue-500">
+                    <span class="text-lg font-semibold">Pastel</span>
+                     <div class="flex justify-center mt-2 space-x-1">
+                        <div class="w-6 h-6 rounded-full bg-[#f9a8d4]"></div>
+                        <div class="w-6 h-6 rounded-full bg-[#a5b4fc]"></div>
+                        <div class="w-6 h-6 rounded-full bg-[#a7f3d0]"></div>
+                    </div>
+                </button>
+                <button data-theme="forest" class="theme-btn p-4 rounded-lg border-4 border-transparent focus:border-blue-500">
+                    <span class="text-lg font-semibold">Floresta</span>
+                     <div class="flex justify-center mt-2 space-x-1">
+                        <div class="w-6 h-6 rounded-full bg-[#e11d48]"></div>
+                        <div class="w-6 h-6 rounded-full bg-[#2563eb]"></div>
+                        <div class="w-6 h-6 rounded-full bg-[#16a34a]"></div>
+                    </div>
+                </button>
+            </div>
+            <button id="close-settings" class="mt-8 w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-3 px-6 rounded-full text-lg">Fechar</button>
+        </div>
+    </div>
+
+    <script>
+        // --- ELEMENTOS DO DOM ---
+        const shapeSource = document.getElementById('shape-source');
+        const targetArea = document.getElementById('target-area');
+        const feedbackContainer = document.getElementById('feedback-container');
+        const resetButton = document.getElementById('reset-button');
+        const gameContainer = document.getElementById('game-container');
+        const levelDisplay = document.getElementById('level-display');
+        const settingsButton = document.getElementById('settings-button');
+        const settingsPanel = document.getElementById('settings-panel');
+        const closeSettingsButton = document.getElementById('close-settings');
+        const themeButtons = document.querySelectorAll('.theme-btn');
+
+        // --- DEFINIÇÕES DO JOGO ---
+        const allGameElements = [
+            { id: 'circle', colorVar: '--shape-1', svg: '<svg class="shape-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path fill="{color}" d="M50,0C22.4,0,0,22.4,0,50s22.4,50,50,50s50-22.4,50-50S77.6,0,50,0z"/></svg>' },
+            { id: 'square', colorVar: '--shape-2', svg: '<svg class="shape-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path fill="{color}" d="M0,0h100v100H0V0z"/></svg>' },
+            { id: 'triangle', colorVar: '--shape-3', svg: '<svg class="shape-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path fill="{color}" d="M50,0L100,100H0L50,0z"/></svg>' },
+            { id: 'star', colorVar: '--shape-4', svg: '<svg class="shape-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path fill="{color}" d="M50,0l11.8,36.2h38.2L67.6,58.8l11.8,36.2L50,72.4L20.6,95l11.8-36.2L0,36.2h38.2L50,0z"/></svg>'},
+            { id: 'heart', colorVar: '--shape-5', svg: '<svg class="shape-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path fill="{color}" d="M83.2,16.8c-10.4-10.4-27.4-10.4-37.8,0L50,12.2L45.4,16.8c-10.4-10.4-27.4-10.4-37.8,0c-10.4,10.4-10.4,27.4,0,37.8l37.8,37.8l37.8-37.8C93.6,44.2,93.6,27.2,83.2,16.8z"/></svg>'},
+            { id: 'diamond', colorVar: '--shape-6', svg: '<svg class="shape-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path fill="{color}" d="M50 0 L100 50 L50 100 L0 50 Z"/></svg>'},
+            { id: 'hexagon', colorVar: '--shape-7', svg: '<svg class="shape-svg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"><path fill="{color}" d="M75 0 L100 43.3 L75 86.6 L25 86.6 L0 43.3 L25 0 Z"/></svg>'}
+        ];
+
+        const levelConfig = {
+            1: { shapeCount: 3 },
+            2: { shapeCount: 4 },
+            3: { shapeCount: 5 },
+            4: { shapeCount: 7 }
+        };
+        const maxLevel = Object.keys(levelConfig).length;
+
+        // --- ESTADO DO JOGO ---
+        let currentLevel = 1;
+        let shapesForCurrentLevel = [];
+        let completedShapesInLevel = [];
+        let currentShape = null;
+        let isDragging = false;
+        let draggedElement = null;
+        let offsetX, offsetY;
+        let audioCtx;
+
+        // --- LÓGICA DE TEMAS ---
+        const themes = {
+            vibrant: {
+                '--bg-color': '#f8fafc', '--text-color': '#334155', '--panel-bg': '#ffffff', '--border-color': '#cbd5e1', '--hover-bg': '#dcfce7', '--hover-border': '#4ade80',
+                '--shape-1': '#ef4444', '--shape-2': '#3b82f6', '--shape-3': '#22c55e', '--shape-4': '#f97316', '--shape-5': '#ec4899', '--shape-6': '#8b5cf6', '--shape-7': '#14b8a6',
+            },
+            pastel: {
+                '--bg-color': '#fdf2f8', '--text-color': '#57534e', '--panel-bg': '#fff1f2', '--border-color': '#fbcfe8', '--hover-bg': '#d1fae5', '--hover-border': '#6ee7b7',
+                '--shape-1': '#f9a8d4', '--shape-2': '#a5b4fc', '--shape-3': '#a7f3d0', '--shape-4': '#fde68a', '--shape-5': '#fda4af', '--shape-6': '#d8b4fe', '--shape-7': '#99f6e4',
+            },
+            forest: {
+                '--bg-color': '#f0fdf4', '--text-color': '#3f3f46', '--panel-bg': '#ffffff', '--border-color': '#a3a3a3', '--hover-bg': '#d4d4d8', '--hover-border': '#71717a',
+                '--shape-1': '#be123c', '--shape-2': '#2563eb', '--shape-3': '#16a34a', '--shape-4': '#d97706', '--shape-5': '#4f46e5', '--shape-6': '#0891b2', '--shape-7': '#db2777',
+            }
+        };
+
+        function applyTheme(themeName) {
+            const theme = themes[themeName];
+            for (const key in theme) {
+                document.documentElement.style.setProperty(key, theme[key]);
+            }
+        }
+
+        // --- FUNÇÕES DE ÁUDIO E EFEITOS ---
+        function playSound(freq, type = 'sine', duration = 0.5) {
+            if (!audioCtx) return;
+            const oscillator = audioCtx.createOscillator();
+            const gainNode = audioCtx.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioCtx.destination);
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gainNode.gain.setValueAtTime(0.2, audioCtx.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+            oscillator.start(audioCtx.currentTime);
+            oscillator.stop(audioCtx.currentTime + duration);
+        }
+
+        function createConfetti() {
+            const confettiCount = 50;
+            for (let i = 0; i < confettiCount; i++) {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                const colorVar = `--shape-${Math.ceil(Math.random() * allGameElements.length)}`;
+                confetti.style.backgroundColor = getComputedStyle(document.documentElement).getPropertyValue(colorVar);
+                confetti.style.left = `${Math.random() * 100}%`;
+                confetti.style.animationDelay = `${Math.random() * 0.5}s`;
+                confetti.style.transform = `rotate(${Math.random() * 360}deg)`;
+                gameContainer.appendChild(confetti);
+                setTimeout(() => confetti.remove(), 3000);
+            }
+        }
+
+        // --- LÓGICA PRINCIPAL DO JOGO ---
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function setupLevel() {
+            levelDisplay.textContent = `Nível ${currentLevel}`;
+            completedShapesInLevel = [];
+            const { shapeCount } = levelConfig[currentLevel];
+            shapesForCurrentLevel = shuffle([...allGameElements]).slice(0, shapeCount);
+            nextTurn();
+        }
+
+        function nextTurn() {
+            shapeSource.innerHTML = '';
+            targetArea.innerHTML = '';
+
+            if (completedShapesInLevel.length === shapesForCurrentLevel.length) {
+                if (currentLevel < maxLevel) {
+                    currentLevel++;
+                    showFeedback(`Nível ${currentLevel}!`, false);
+                    playSound(800, 'triangle', 0.6);
+                    setTimeout(setupLevel, 2500);
+                } else {
+                    showFeedback('Parabéns! Você completou tudo!', true);
+                    playSound(1000, 'triangle', 1);
+                    createConfetti();
+                }
+                return;
+            }
+
+            const availableShapes = shapesForCurrentLevel.filter(s => !completedShapesInLevel.includes(s.id));
+            currentShape = availableShapes[Math.floor(Math.random() * availableShapes.length)];
+
+            const shapeDiv = document.createElement('div');
+            shapeDiv.classList.add('shape');
+            shapeDiv.dataset.shape = currentShape.id;
+            const color = getComputedStyle(document.documentElement).getPropertyValue(currentShape.colorVar);
+            shapeDiv.innerHTML = currentShape.svg.replace('{color}', color);
+            shapeDiv.style.position = 'relative';
+            shapeSource.appendChild(shapeDiv);
+            addDragEvents(shapeDiv);
+
+            const shuffledTargets = shuffle([...shapesForCurrentLevel]);
+            shuffledTargets.forEach(el => {
+                const targetDiv = document.createElement('div');
+                targetDiv.classList.add('target', 'rounded-xl');
+                targetDiv.dataset.shape = el.id;
+                targetDiv.innerHTML = el.svg.replace('{color}', 'transparent');
+                targetArea.appendChild(targetDiv);
+            });
+        }
+        
+        function handleCorrectDrop(target) {
+            const color = getComputedStyle(document.documentElement).getPropertyValue(currentShape.colorVar);
+            target.innerHTML = currentShape.svg.replace('{color}', color);
+            target.style.borderColor = color;
+            target.style.borderStyle = 'solid';
+            
+            draggedElement.remove();
+            completedShapesInLevel.push(currentShape.id);
+            
+            playSound(600);
+            createConfetti();
+            showFeedback('Muito bem!', false);
+
+            setTimeout(nextTurn, 2000);
+        }
+
+        function showFeedback(message, isFinal) {
+            feedbackContainer.innerHTML = '';
+            const feedbackEl = document.createElement('div');
+            feedbackEl.id = 'feedback';
+            const bgColor = isFinal ? 'bg-green-500 text-white' : 'bg-yellow-300 text-yellow-800';
+            feedbackEl.className = `text-3xl font-bold p-4 rounded-xl shadow-xl ${bgColor}`;
+            feedbackEl.textContent = message;
+            feedbackContainer.appendChild(feedbackEl);
+        }
+
+        function resetGame() {
+            currentLevel = 1;
+            setupLevel();
+        }
+
+        // --- LÓGICA DE ARRASTAR E SOLTAR (DRAG & DROP) ---
+        function addDragEvents(element) {
+            element.addEventListener('mousedown', startDrag);
+            element.addEventListener('touchstart', startDrag, { passive: false });
+        }
+        
+        function startDrag(e) {
+            e.preventDefault();
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+            isDragging = true;
+            draggedElement = e.currentTarget;
+            draggedElement.classList.add('dragging');
+            const rect = draggedElement.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            offsetX = clientX - rect.left;
+            offsetY = clientY - rect.top;
+            document.body.appendChild(draggedElement);
+            draggedElement.style.position = 'absolute';
+            draggedElement.style.left = `${clientX - offsetX}px`;
+            draggedElement.style.top = `${clientY - offsetY}px`;
+            document.addEventListener('mousemove', onDrag);
+            document.addEventListener('mouseup', endDrag);
+            document.addEventListener('touchmove', onDrag, { passive: false });
+            document.addEventListener('touchend', endDrag);
+        }
+
+        function onDrag(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            draggedElement.style.left = `${clientX - offsetX}px`;
+            draggedElement.style.top = `${clientY - offsetY}px`;
+            document.querySelectorAll('.target').forEach(target => {
+                const rect = target.getBoundingClientRect();
+                if (clientX > rect.left && clientX < rect.right && clientY > rect.top && clientY < rect.bottom) {
+                    target.classList.add('hover');
+                } else {
+                    target.classList.remove('hover');
+                }
+            });
+        }
+
+        function endDrag(e) {
+            if (!isDragging) return;
+            isDragging = false;
+            draggedElement.classList.remove('dragging');
+            let droppedOnCorrectTarget = false;
+            const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+            const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+            document.querySelectorAll('.target').forEach(target => {
+                target.classList.remove('hover');
+                const rect = target.getBoundingClientRect();
+                if (clientX > rect.left && clientX < rect.right && clientY > rect.top && clientY < rect.bottom) {
+                    if (target.dataset.shape === draggedElement.dataset.shape) {
+                        droppedOnCorrectTarget = true;
+                        handleCorrectDrop(target);
+                    }
+                }
+            });
+            if (!droppedOnCorrectTarget) {
+                shapeSource.appendChild(draggedElement);
+                draggedElement.style.position = 'relative';
+                draggedElement.style.left = 'auto';
+                draggedElement.style.top = 'auto';
+            }
+            document.removeEventListener('mousemove', onDrag);
+            document.removeEventListener('mouseup', endDrag);
+            document.removeEventListener('touchmove', onDrag);
+            document.removeEventListener('touchend', endDrag);
+        }
+
+        // --- EVENT LISTENERS ---
+        resetButton.addEventListener('click', resetGame);
+        settingsButton.addEventListener('click', () => settingsPanel.classList.remove('hidden'));
+        closeSettingsButton.addEventListener('click', () => settingsPanel.classList.add('hidden'));
+        themeButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                applyTheme(button.dataset.theme);
+                settingsPanel.classList.add('hidden');
+            });
+        });
+
+        // --- INICIALIZAÇÃO ---
+        applyTheme('vibrant'); // Define o tema padrão
+        resetGame(); // Inicia o jogo
+    </script>
+</body>
+</html>

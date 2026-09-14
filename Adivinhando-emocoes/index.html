@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo das Emoções</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+    body {
+        font-family: 'Inter', sans-serif;
+        transition: background-color 0.3s, color 0.3s;
+    }
+    .face-display {
+        font-size: 6rem;
+        line-height: 1;
+    }
+    .btn, .btn-setting {
+        transition: all 0.2s ease-in-out;
+    }
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    .low-sensory-mode { background-color: #fff !important; color: #000 !important; }
+    .low-sensory-mode .shadow-xl { box-shadow: none; border: 2px solid #000; }
+    .low-sensory-mode .bg-gray-100 { background-color: #fff; }
+    .low-sensory-mode .bg-white { background-color: #fff; }
+    .low-sensory-mode .text-gray-800 { color: #000; }
+    .low-sensory-mode .text-gray-600 { color: #333; }
+    .low-sensory-mode .btn { transform: none !important; box-shadow: none !important; border: 2px solid #000; }
+    .low-sensory-mode .bg-indigo-600 { background-color: #000; color: #fff;}
+    .low-sensory-mode .bg-gray-200 { background-color: #eee; }
+    .low-sensory-mode .text-green-600 { color: #008000; }
+    .low-sensory-mode .text-red-600 { color: #d0000; }
+    .low-sensory-mode #explanation-container { background-color: #f0f0f0; border-top: 2px solid #ccc;}
+    .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 40; }
+    .modal-content { z-index: 50; background-color: #fff; color: #333; }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <!-- Tela de Início -->
+    <div id="start-screen" class="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Jogo das Emoções</h1>
+        <p class="text-gray-600 mb-6">Aprenda sobre emoções e salve seus acertos!</p>
+        <input type="text" id="player-name-input" placeholder="SEU NOME" maxlength="10" class="w-full p-3 text-center border-2 border-gray-300 rounded-lg mb-4 uppercase focus:outline-none focus:border-indigo-500">
+        <button id="start-game-button" class="btn w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 disabled:opacity-50" disabled>
+            A Ligar...
+        </button>
+    </div>
+
+    <!-- Conteúdo Principal do Jogo -->
+    <div id="game-container" class="hidden bg-white rounded-2xl shadow-xl p-6 md:p-8 text-center w-full max-w-lg mx-auto">
+        <div class="flex justify-between items-center mb-4">
+            <div class="text-left">
+                <p class="font-semibold text-gray-600">Jogador: <span id="player-display" class="text-indigo-600 font-bold"></span></p>
+            </div>
+            <div class="text-right">
+                <p class="font-semibold text-green-600">Acertos: <span id="score">0</span></p>
+                <p class="font-semibold text-red-600">Erros: <span id="errors">0</span></p>
+            </div>
+        </div>
+    
+        <fieldset class="border-2 border-gray-300 rounded-lg p-4 mb-6">
+            <legend class="text-lg font-semibold px-2">Configurações</legend>
+            <div class="flex flex-col sm:flex-row justify-around items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <label for="difficulty" class="font-semibold">Dificuldade:</label>
+                    <select id="difficulty" class="btn-setting border-2 border-gray-300 rounded-md p-2">
+                        <option value="easy">Fácil</option>
+                        <option value="medium">Médio</option>
+                    </select>
+                </div>
+                <div class="flex items-center gap-2">
+                    <label for="low-sensory-toggle" class="font-semibold">Modo Simples:</label>
+                    <input type="checkbox" id="low-sensory-toggle" class="h-6 w-6">
+                </div>
+            </div>
+        </fieldset>
+    
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Qual é a emoção?</h1>
+        <div id="face-display" class="face-display my-8 text-gray-800"></div>
+        <div id="options-container" class="grid grid-cols-2 gap-4 mb-6"></div>
+        <p id="feedback" class="h-6 text-lg font-semibold mb-4">&nbsp;</p>
+        <div id="explanation-container" class="bg-gray-100 rounded-lg p-4 text-left hidden">
+            <h3 id="explanation-title" class="font-bold text-lg mb-1"></h3>
+            <p id="explanation-text"></p>
+        </div>
+        <button id="next-button" class="btn mt-6 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">Próximo</button>
+        <button id="leaderboard-btn" class="btn mt-2 w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Ver Recordes</button>
+    </div>
+
+    <!-- Modal do Ranking -->
+    <div id="leaderboard-modal" class="hidden fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content rounded-lg shadow-xl p-6 w-full max-w-md max-h-[80vh] flex flex-col">
+            <h3 id="leaderboard-title" class="text-2xl font-bold text-center text-indigo-600 mb-4">Ranking de Acertos</h3>
+            <div id="leaderboard-content" class="overflow-y-auto text-sm">
+                 <p id="leaderboard-loading" class="text-center text-gray-500">A carregar recordes...</p>
+            </div>
+            <div class="mt-6 text-center">
+                <button id="close-leaderboard-button" class="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- Importações do Firebase ---
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getDatabase, ref, push, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+        // --- Elementos do DOM ---
+        const startScreen = document.getElementById('start-screen');
+        const gameContainer = document.getElementById('game-container');
+        const startGameButton = document.getElementById('start-game-button');
+        const playerNameInput = document.getElementById('player-name-input');
+        const playerDisplay = document.getElementById('player-display');
+        const faceDisplay = document.getElementById('face-display');
+        const optionsContainer = document.getElementById('options-container');
+        const feedback = document.getElementById('feedback');
+        const nextButton = document.getElementById('next-button');
+        const explanationContainer = document.getElementById('explanation-container');
+        const explanationTitle = document.getElementById('explanation-title');
+        const explanationText = document.getElementById('explanation-text');
+        const difficultySelect = document.getElementById('difficulty');
+        const lowSensoryToggle = document.getElementById('low-sensory-toggle');
+        const scoreEl = document.getElementById('score');
+        const errorsEl = document.getElementById('errors');
+        const leaderboardBtn = document.getElementById('leaderboard-btn');
+        const leaderboardModal = document.getElementById('leaderboard-modal');
+        const leaderboardContent = document.getElementById('leaderboard-content');
+        const leaderboardLoading = document.getElementById('leaderboard-loading');
+        const leaderboardTitle = document.getElementById('leaderboard-title');
+        const closeLeaderboardButton = document.getElementById('close-leaderboard-button');
+        
+        // --- Dados do Jogo ---
+        const emotions = {
+            easy: [ { face: '😊', name: 'Feliz', description: 'Sentimento de alegria e contentamento.' }, { face: '😥', name: 'Triste', description: 'Sentimento de infelicidade e melancolia.' }, { face: '😠', name: 'Zangado', description: 'Sentimento de raiva e irritação.' }, { face: '😮', name: 'Surpreso', description: 'Reação a algo inesperado.' }, { face: '😱', name: 'Assustado', description: 'Sentimento de medo intenso.' }, { face: '😂', name: 'Alegre', description: 'Uma forma intensa de felicidade.' }, { face: '😍', name: 'Apaixonado', description: 'Sentimento de amor e admiração.' }, { face: '😭', name: 'Muito Triste', description: 'Uma forma intensa de tristeza.' } ],
+            medium: [ { face: '🤔', name: 'Pensativo', description: 'Estado de reflexão e concentração.' }, { face: '🤢', name: 'Nojo', description: 'Sentimento de repulsa e aversão.' }, { face: '😑', name: 'Neutro', description: 'Estado sem emoção particular.' }, { face: '🤯', name: 'Chocado', description: 'Sentimento de espanto extremo.' }, { face: '🥺', name: 'Suplicante', description: 'Expressão de vulnerabilidade e pedido.' }, { face: '🧐', name: 'Desconfiado', description: 'Sentimento de dúvida e suspeita.' }, { face: '🥴', name: 'Confuso', description: 'Estado de desorientação mental.' }, { face: '🙄', name: 'Irritado', description: 'Sentimento de aborrecimento.' }, { face: '😇', name: 'Inocente', description: 'Expressão de pureza e bondade.' }, { face: '🤩', name: 'Fascinado', description: 'Sentimento de admiração e encantamento.' } ]
+        };
+
+        let allEmotionsForLevel = [], emotionPool = [], currentEmotion = null;
+        let score = 0, errors = 0, playerName = 'ANONIMO', selectedDifficultyKey = 'easy';
+
+        // --- Configuração do Firebase ---
+        const firebaseConfig = {
+          apiKey: "AIzaSyDBTrsQWc6GPq5R0Ai2KmPki3hpHbg4c6g",
+          authDomain: "joga-cobrinha.firebaseapp.com",
+          projectId: "joga-cobrinha",
+          storageBucket: "joga-cobrinha.appspot.com",
+          messagingSenderId: "849126304274",
+          appId: "1:849126304274:web:e6855f68bd06e33e9686cb"
+        };
+        let db;
+
+        // --- Funções do Jogo ---
+        function shuffle(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; } }
+        
+        function setupGame() {
+            score = 0; errors = 0;
+            updateScoreboard();
+            selectedDifficultyKey = difficultySelect.value;
+            if (selectedDifficultyKey === 'easy') {
+                allEmotionsForLevel = [...emotions.easy];
+            } else {
+                allEmotionsForLevel = [...emotions.easy, ...emotions.medium];
+            }
+            refillPool();
+            displayNewFace();
+        }
+
+        function refillPool() { emotionPool = [...allEmotionsForLevel]; shuffle(emotionPool); }
+
+        function displayNewFace() {
+            if (emotionPool.length === 0) refillPool();
+            currentEmotion = emotionPool.pop();
+            faceDisplay.textContent = currentEmotion.face;
+            let options = [currentEmotion];
+            let otherEmotions = allEmotionsForLevel.filter(e => e.name !== currentEmotion.name);
+            shuffle(otherEmotions);
+            options.push(...otherEmotions.slice(0, 3));
+            shuffle(options);
+            optionsContainer.innerHTML = '';
+            options.forEach(opt => {
+                const button = document.createElement('button');
+                button.textContent = opt.name;
+                button.disabled = false;
+                button.classList.add('btn', 'bg-gray-200', 'text-gray-700', 'font-semibold', 'py-3', 'px-4', 'rounded-lg');
+                button.onclick = () => checkAnswer(opt);
+                optionsContainer.appendChild(button);
+            });
+            feedback.textContent = '\u00A0';
+            feedback.className = 'h-6 text-lg font-semibold mb-4';
+            explanationContainer.classList.add('hidden');
+            nextButton.style.display = 'none'; 
+            optionsContainer.style.display = 'grid';
+        }
+
+        function checkAnswer(selectedOption) {
+            document.querySelectorAll('#options-container button').forEach(b => b.disabled = true);
+            if (selectedOption.name === currentEmotion.name) {
+                feedback.textContent = 'Correto!';
+                feedback.classList.add('text-green-600');
+                score++;
+            } else {
+                feedback.innerHTML = `Quase! A resposta era <strong>${currentEmotion.name}</strong>.`;
+                feedback.classList.add('text-red-600');
+                errors++;
+            }
+            updateScoreboard();
+            saveScore(playerName, score, selectedDifficultyKey);
+            explanationTitle.textContent = `${currentEmotion.face} ${currentEmotion.name}`;
+            explanationText.textContent = currentEmotion.description;
+            explanationContainer.classList.remove('hidden');
+            optionsContainer.style.display = 'none';
+            nextButton.style.display = 'block';
+        }
+        
+        function updateScoreboard() {
+            scoreEl.textContent = score;
+            errorsEl.textContent = errors;
+        }
+
+        // --- Funções de Recorde ---
+        async function initializeFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getDatabase(app);
+                const auth = getAuth(app);
+                await signInAnonymously(auth);
+                startGameButton.disabled = false;
+                startGameButton.textContent = "Começar a Jogar!";
+            } catch (error) { 
+                startGameButton.textContent = "Erro de Conexão";
+                console.error("Erro ao inicializar o Firebase:", error); 
+            }
+        }
+
+        function saveScore(name, scoreValue, difficulty) {
+            if (!db || scoreValue < 0) return;
+            const leaderboardRef = ref(db, `public/leaderboard-adivinhandoemocoes-${difficulty}`);
+            push(leaderboardRef, { name: name, score: scoreValue, timestamp: serverTimestamp() });
+        }
+
+        function listenForLeaderboardUpdates(difficulty) {
+            const leaderboardRef = ref(db, `public/leaderboard-adivinhandoemocoes-${difficulty}`);
+            onValue(leaderboardRef, (snapshot) => {
+                const scoresData = snapshot.val();
+                let allScores = [];
+                if (scoresData) {
+                    allScores = Object.values(scoresData);
+                }
+                const bestScores = new Map();
+                allScores.forEach(s => {
+                    const existingScore = bestScores.get(s.name);
+                    if (!existingScore || s.score > existingScore.score) {
+                        bestScores.set(s.name, s);
+                    }
+                });
+                const uniqueBestScores = Array.from(bestScores.values()).sort((a, b) => b.score - a.score);
+                renderLeaderboard(uniqueBestScores, difficulty);
+            });
+        }
+
+        function renderLeaderboard(scores, difficulty) {
+            leaderboardTitle.textContent = `Ranking - ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`;
+            leaderboardLoading.classList.add('hidden');
+            if (scores.length === 0) {
+                leaderboardContent.innerHTML = '<p class="text-center text-gray-500">Nenhum recorde ainda.</p>';
+                return;
+            }
+            let tableHTML = `<table class="w-full text-left"><thead class="text-xs text-indigo-600 uppercase"><tr><th class="px-2 py-2">#</th><th class="px-4 py-2">Nome</th><th class="px-4 py-2 text-right">Acertos</th></tr></thead><tbody>`;
+            scores.slice(0, 20).forEach((s, index) => {
+                tableHTML += `<tr class="border-b"><td class="px-2 py-2 font-bold">${index + 1}</td><td class="px-4 py-2">${s.name}</td><td class="px-4 py-2 text-right font-bold">${s.score}</td></tr>`;
+            });
+            tableHTML += '</tbody></table>';
+            leaderboardContent.innerHTML = tableHTML;
+        }
+
+        // --- Listeners de Eventos ---
+        startGameButton.addEventListener('click', () => {
+            const nameInput = playerNameInput.value.trim().toUpperCase();
+            if (nameInput) playerName = nameInput;
+            playerDisplay.textContent = playerName;
+            startScreen.classList.add('hidden');
+            gameContainer.classList.remove('hidden');
+            setupGame();
+        });
+        
+        nextButton.addEventListener('click', displayNewFace);
+        difficultySelect.addEventListener('change', setupGame);
+        lowSensoryToggle.addEventListener('change', (e) => document.body.classList.toggle('low-sensory-mode', e.target.checked));
+        leaderboardBtn.addEventListener('click', () => {
+            listenForLeaderboardUpdates(selectedDifficultyKey);
+            leaderboardModal.classList.remove('hidden');
+        });
+        closeLeaderboardButton.addEventListener('click', () => leaderboardModal.classList.add('hidden'));
+
+        // --- Início ---
+        window.onload = () => initializeFirebase();
+    </script>
+</body>
+</html>

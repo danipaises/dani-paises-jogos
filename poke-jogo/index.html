@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogos de Curiosidades Pokémon</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f0f0f0;
+            background-image: url('https://assets.pokemon.com/static2/_ui/images/textures/wood_grain.png');
+        }
+        .font-pokemon { font-family: 'Press Start 2P', cursive; }
+        .game-container { display: none; }
+        .pokemon-silhouette { filter: brightness(0); transition: filter 0.5s ease-in-out; }
+        .pokemon-silhouette.revealed { filter: brightness(1); }
+        .btn-type { transition: all 0.2s ease; }
+        .btn-type.selected { transform: scale(1.1); box-shadow: 0 0 10px 2px rgba(255, 255, 0, 0.7); }
+        #main-menu, .game-container { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+        .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 40; }
+        .modal-content { z-index: 50; background-color: #1f2937; color: #fff; }
+    </style>
+</head>
+<body class="bg-yellow-300 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <header class="text-center mb-8">
+            <h1 class="font-pokemon text-3xl md:text-5xl text-blue-800" style="text-shadow: 2px 2px #ffcb05;">Poké-Jogos</h1>
+            <p class="text-blue-600 mt-2">Teste seus conhecimentos sobre o universo Pokémon!</p>
+        </header>
+
+        <!-- Menu Principal -->
+        <main id="main-menu" class="text-center">
+             <input type="text" id="player-name-input" placeholder="SEU NOME" maxlength="10" class="w-full max-w-xs mx-auto p-3 text-center bg-white border-2 border-blue-800 rounded-lg text-gray-800 uppercase mb-4 focus:outline-none focus:border-yellow-400 font-pokemon text-sm">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <button onclick="startGame('game-qep')" class="bg-red-600 hover:bg-red-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-200">Quem é esse Pokémon?</button>
+                <button onclick="startGame('game-mcq')" class="bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-200">Trivia de Múltipla Escolha</button>
+                <button onclick="startGame('game-tf')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-200">Verdadeiro ou Falso</button>
+                <button onclick="startGame('game-type')" class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 px-6 rounded-lg shadow-lg transform hover:scale-105 transition-transform duration-200">Qual o Tipo?</button>
+            </div>
+            <p id="loading-text" class="text-blue-800 mt-4">A ligar...</p>
+        </main>
+
+        <!-- Jogo 1: Quem é esse Pokémon? (Múltipla Escolha) -->
+        <div id="game-qep" class="game-container bg-white p-8 rounded-lg shadow-2xl">
+            <div class="flex justify-between items-center mb-4">
+                <button onclick="backToMenu()" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded text-sm">Voltar</button>
+                <div class="font-pokemon text-lg">PONTOS: <span id="qep-score" class="text-green-600">0</span></div>
+                <button id="qep-leaderboard-btn" class="bg-yellow-500 hover:bg-yellow-600 text-blue-800 font-bold py-2 px-4 rounded text-sm">Ranking</button>
+            </div>
+            <h2 class="font-pokemon text-2xl text-center mb-6">Quem é esse Pokémon?</h2>
+            <div id="qep-loader" class="text-center">Carregando...</div>
+            <div id="qep-content" class="hidden">
+                <div class="flex justify-center mb-6"><img id="qep-image" src="" alt="Silhueta do Pokémon" class="h-64 pokemon-silhouette"></div>
+                <div class="text-center">
+                    <div id="qep-options" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 max-w-lg mx-auto"></div>
+                    <p id="qep-result" class="mt-6 text-center h-6 font-bold"></p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Outros jogos (sem placar por enquanto) -->
+        <div id="game-mcq" class="game-container bg-white p-8 rounded-lg shadow-2xl">...</div>
+        <div id="game-tf" class="game-container bg-white p-8 rounded-lg shadow-2xl">...</div>
+        <div id="game-type" class="game-container bg-white p-8 rounded-lg shadow-2xl">...</div>
+    </div>
+
+    <!-- Modal do Ranking -->
+    <div id="leaderboard-modal" class="hidden fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content rounded-lg shadow-xl p-6 w-full max-w-md max-h-[80vh] flex flex-col">
+            <h3 class="text-2xl font-bold text-center text-yellow-400 mb-4 font-pokemon">Ranking</h3>
+            <div id="leaderboard-content" class="overflow-y-auto text-sm">
+                 <p id="leaderboard-loading" class="text-center">A carregar recordes...</p>
+            </div>
+            <div class="mt-6 text-center">
+                <button id="close-leaderboard-button" class="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getDatabase, ref, push, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+    const API_URL = 'https://pokeapi.co/api/v2/';
+    const MAX_POKEMON_ID = 898;
+    let playerName = 'ANONIMO';
+    let qepScore = 0;
+
+    // --- Firebase ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyDBTrsQWc6GPq5R0Ai2KmPki3hpHbg4c6g",
+      authDomain: "joga-cobrinha.firebaseapp.com",
+      projectId: "joga-cobrinha",
+      storageBucket: "joga-cobrinha.appspot.com",
+      messagingSenderId: "849126304274",
+      appId: "1:849126304274:web:e6855f68bd06e33e9686cb"
+    };
+    let db;
+    const LEADERBOARD_PATH = 'public/leaderboard-pokequem';
+
+    // --- Elementos Globais ---
+    const loadingText = document.getElementById('loading-text');
+    const playerNameInput = document.getElementById('player-name-input');
+    const leaderboardModal = document.getElementById('leaderboard-modal');
+    const leaderboardContent = document.getElementById('leaderboard-content');
+    const leaderboardLoading = document.getElementById('leaderboard-loading');
+    const closeLeaderboardButton = document.getElementById('close-leaderboard-button');
+    
+    // --- Funções Globais ---
+    window.startGame = (gameId) => {
+        const nameInput = playerNameInput.value.trim().toUpperCase();
+        if (nameInput) playerName = nameInput;
+        
+        document.getElementById('main-menu').style.display = 'none';
+        document.querySelectorAll('.game-container').forEach(el => el.style.display = 'none');
+        document.getElementById(gameId).style.display = 'block';
+
+        if (gameId === 'game-qep') initQEP();
+        // Adicionar inicialização de outros jogos aqui se necessário
+    };
+
+    window.backToMenu = () => {
+        saveScore(playerName, qepScore); // Salva o placar ao voltar
+        document.querySelectorAll('.game-container').forEach(el => el.style.display = 'none');
+        document.getElementById('main-menu').style.display = 'block';
+    };
+
+    async function fetchPokemon(id) {
+        const response = await fetch(`${API_URL}pokemon/${id}`);
+        return await response.json();
+    }
+    
+    // --- Jogo 1: Quem é esse Pokémon? ---
+    const qepScoreEl = document.getElementById('qep-score');
+    let qepCorrectName = '';
+    
+    async function initQEP() {
+        document.getElementById('qep-loader').style.display = 'block';
+        document.getElementById('qep-content').style.display = 'none';
+        
+        const qepImage = document.getElementById('qep-image');
+        const qepResult = document.getElementById('qep-result');
+        const optionsContainer = document.getElementById('qep-options');
+        
+        qepResult.textContent = '';
+        optionsContainer.innerHTML = '';
+        qepImage.className = 'h-64 pokemon-silhouette';
+
+        const randomId = Math.floor(Math.random() * MAX_POKEMON_ID) + 1;
+        const pokemon = await fetchPokemon(randomId);
+        
+        qepImage.src = pokemon.sprites.other['official-artwork'].front_default;
+        qepCorrectName = pokemon.name;
+        const options = await qepGenerateOptions(qepCorrectName);
+        qepDisplayOptions(options);
+        
+        document.getElementById('qep-loader').style.display = 'none';
+        document.getElementById('qep-content').style.display = 'block';
+    }
+
+    async function qepGenerateOptions(correct) {
+        const options = [correct];
+        while (options.length < 4) {
+            const randomId = Math.floor(Math.random() * MAX_POKEMON_ID) + 1;
+            const p = await fetchPokemon(randomId);
+            if (p && !options.includes(p.name)) options.push(p.name);
+        }
+        return options.sort(() => Math.random() - 0.5);
+    }
+
+    function qepDisplayOptions(options) {
+        const optionsContainer = document.getElementById('qep-options');
+        optionsContainer.innerHTML = '';
+        options.forEach(option => {
+            const button = document.createElement('button');
+            button.textContent = option;
+            button.className = 'bg-yellow-400 hover:bg-yellow-500 text-gray-800 font-semibold py-3 px-4 rounded-lg capitalize';
+            button.onclick = () => qepCheckAnswer(option, button);
+            optionsContainer.appendChild(button);
+        });
+    }
+
+    function qepCheckAnswer(selected, button) {
+        const resultEl = document.getElementById('qep-result');
+        const qepImage = document.getElementById('qep-image');
+        const buttons = document.querySelectorAll('#qep-options button');
+        buttons.forEach(btn => btn.disabled = true);
+        qepImage.classList.add('revealed');
+
+        if (selected === qepCorrectName) {
+            resultEl.textContent = 'Correto!';
+            resultEl.style.color = 'green';
+            button.className = 'bg-green-500 text-white font-semibold py-3 px-4 rounded-lg capitalize';
+            qepScore++;
+            qepScoreEl.textContent = qepScore;
+        } else {
+            resultEl.textContent = `Incorreto! O Pokémon é ${qepCorrectName}.`;
+            resultEl.style.color = 'red';
+            button.className = 'bg-red-500 text-white font-semibold py-3 px-4 rounded-lg capitalize';
+            buttons.forEach(btn => {
+                if(btn.textContent === qepCorrectName) btn.className = 'bg-green-500 text-white font-semibold py-3 px-4 rounded-lg capitalize';
+            });
+        }
+        setTimeout(initQEP, 3000);
+    }
+    
+    // --- Funções de Recorde ---
+    async function initializeFirebase() {
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getDatabase(app);
+            const auth = getAuth(app);
+            await signInAnonymously(auth);
+            loadingText.style.display = 'none';
+        } catch (error) { 
+            loadingText.textContent = "Erro de Conexão";
+            console.error("Erro ao inicializar o Firebase:", error); 
+        }
+    }
+
+    function saveScore(name, score) {
+        if (!db || score === 0) return;
+        push(ref(db, LEADERBOARD_PATH), { name, score, timestamp: serverTimestamp() });
+    }
+
+    function showLeaderboard() {
+        leaderboardModal.classList.remove('hidden');
+        leaderboardLoading.classList.remove('hidden');
+        leaderboardContent.innerHTML = '';
+
+        onValue(ref(db, LEADERBOARD_PATH), (snapshot) => {
+            const scoresData = snapshot.val();
+            const allScores = scoresData ? Object.values(scoresData) : [];
+            
+            const bestScores = new Map();
+            allScores.forEach(s => {
+                const existing = bestScores.get(s.name);
+                if (!existing || s.score > existing.score) bestScores.set(s.name, s);
+            });
+            
+            const uniqueBestScores = Array.from(bestScores.values()).sort((a, b) => b.score - a.score);
+            renderLeaderboard(uniqueBestScores);
+        }, { onlyOnce: true });
+    }
+
+    function renderLeaderboard(scores) {
+        leaderboardLoading.classList.add('hidden');
+        if (scores.length === 0) {
+            leaderboardContent.innerHTML = '<p class="text-center">Nenhum recorde ainda.</p>';
+            return;
+        }
+        let tableHTML = `<table class="w-full text-left"><thead class="text-xs text-yellow-400 uppercase"><tr><th class="px-2 py-2">#</th><th class="px-4 py-2">Nome</th><th class="px-4 py-2 text-right">Pontos</th></tr></thead><tbody>`;
+        scores.slice(0, 20).forEach((s, index) => {
+            tableHTML += `<tr class="border-b border-gray-700"><td class="px-2 py-2 font-bold">${index + 1}</td><td class="px-4 py-2 font-pokemon text-xs">${s.name}</td><td class="px-4 py-2 text-right font-bold">${s.score}</td></tr>`;
+        });
+        tableHTML += '</tbody></table>';
+        leaderboardContent.innerHTML = tableHTML;
+    }
+
+    // --- Event Listeners ---
+    document.getElementById('qep-leaderboard-btn').addEventListener('click', showLeaderboard);
+    closeLeaderboardButton.addEventListener('click', () => leaderboardModal.classList.add('hidden'));
+
+    // --- Início ---
+    window.onload = initializeFirebase;
+</script>
+
+</body>
+</html>

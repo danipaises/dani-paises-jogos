@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conecta Emoções</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Poppins', sans-serif; display: grid; place-items: center; }
+        :root { --bg-color: #F0F8FF; --card-color: #FFFFFF; --text-color: #333333; --accent-color: #AED9E0; --correct-color: #A8E6CF; --incorrect-color: #FFD3B6; --button-color: #88C0D0; --button-hover: #5E81AC; }
+        .option-card, .mode-btn, .difficulty-btn { transition: all 0.2s ease-in-out; border: 2px solid var(--accent-color); display: flex; align-items: center; justify-content: center; min-height: 120px; padding: 1rem; }
+        .option-card:hover { transform: scale(1.05); border-color: var(--button-hover); }
+        .correct-answer { border-color: var(--correct-color) !important; background-color: #F0FFF0; transform: scale(1.05); }
+        .incorrect-answer { opacity: 0.5; pointer-events: none; }
+        .feedback-message { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .selected { background-color: var(--button-color); color: white; border-color: var(--button-hover); }
+        #question-display.emoji-pair-question { font-size: 4.5rem; letter-spacing: 0.5rem; }
+        #options-grid.single-emoji .option-card { font-size: 3rem; }
+        #options-grid.pair-emoji .option-card { font-size: 2.25rem; letter-spacing: 0.5rem; }
+        .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.6); z-index: 40; }
+        .modal-content { z-index: 50; background-color: #fff; }
+    </style>
+</head>
+<body class="bg-[var(--bg-color)] text-[var(--text-color)] min-h-screen p-4">
+    <div id="game-container" class="w-full max-w-4xl mx-auto text-center">
+        <!-- Tela Inicial -->
+        <div id="start-screen" class="p-8 bg-[var(--card-color)] rounded-2xl shadow-lg">
+            <h1 class="text-4xl md:text-5xl font-bold text-[var(--button-hover)] mb-4">Conecta Emoções</h1>
+            <p class="text-lg md:text-xl mb-2">1. Escolha o modo de jogo:</p>
+            <div id="mode-selector" class="flex flex-wrap justify-center gap-3 md:gap-4 mb-6">
+                <button data-mode="classico" class="mode-btn font-semibold py-2 px-4 md:px-6 rounded-lg">Clássico</button>
+                <button data-mode="inverso" class="mode-btn font-semibold py-2 px-4 md:px-6 rounded-lg">Inverso</button>
+                <button data-mode="misto" class="mode-btn font-semibold py-2 px-4 md:px-6 rounded-lg">Misto</button>
+                <button data-mode="misto_inverso" class="mode-btn font-semibold py-2 px-4 md:px-6 rounded-lg">Misto Inverso</button>
+            </div>
+            <p class="text-lg md:text-xl mb-2">2. Escolha o nível:</p>
+            <div id="difficulty-selector" class="flex justify-center gap-4 mb-6">
+                <button data-difficulty="facil" class="difficulty-btn font-semibold py-2 px-6 rounded-lg">Fácil</button>
+                <button data-difficulty="medio" class="difficulty-btn font-semibold py-2 px-6 rounded-lg">Médio</button>
+                <button data-difficulty="dificil" class="difficulty-btn font-semibold py-2 px-6 rounded-lg">Difícil</button>
+            </div>
+             <input type="text" id="player-name-input" placeholder="SEU NOME" maxlength="10" class="w-full max-w-xs mx-auto p-3 text-center border-2 border-gray-300 rounded-lg mb-4 uppercase focus:outline-none focus:border-indigo-500">
+            <button id="start-button" class="bg-[var(--button-color)] hover:bg-[var(--button-hover)] text-white font-bold py-4 px-10 text-2xl rounded-xl shadow-md transition-transform transform hover:scale-105 disabled:opacity-50" disabled>A Ligar...</button>
+        </div>
+        <!-- Telas do Jogo -->
+        <div id="main-game" class="hidden">
+            <div class="flex justify-between items-center mb-4 text-left">
+                <p class="font-semibold">Jogador: <span id="player-display" class="font-bold text-[var(--button-hover)]"></span></p>
+                <p class="font-semibold">Acertos: <span id="score" class="font-bold text-green-600">0</span></p>
+            </div>
+            <div id="question-display" class="mb-8 p-6 bg-[var(--card-color)] rounded-2xl shadow-md min-h-[150px] flex items-center justify-center">
+                <div id="question-emoji" class="text-7xl md:text-8xl"></div>
+                <h2 id="question-text" class="text-3xl md:text-4xl font-bold"></h2>
+            </div>
+            <div id="options-grid" class="grid grid-cols-1 md:grid-cols-3 gap-6"></div>
+            <div id="feedback-area" class="mt-8 h-12"><p id="feedback-text" class="text-2xl font-semibold feedback-message"></p></div>
+        </div>
+        <div id="end-screen" class="hidden p-8 bg-[var(--card-color)] rounded-2xl shadow-lg text-center">
+            <div class="text-8xl mb-4">🎉</div>
+            <h1 class="text-4xl font-bold text-green-600 mb-4">Parabéns!</h1>
+            <p class="text-xl mb-2">Você conectou todas as emoções.</p>
+            <p class="text-2xl mb-8">Acertos: <span id="final-score" class="font-bold"></span></p>
+            <button id="play-again-button" class="bg-[var(--button-color)] hover:bg-[var(--button-hover)] text-white font-bold py-3 px-6 rounded-xl shadow-md transition-transform transform hover:scale-105">Voltar ao Início</button>
+            <button id="leaderboard-btn" class="ml-4 bg-blue-500 hover:bg-blue-600 text-white font-bold py-3 px-6 rounded-xl shadow-md">Ver Recordes</button>
+        </div>
+    </div>
+    <!-- Modal do Ranking -->
+    <div id="leaderboard-modal" class="hidden fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div class="modal-backdrop"></div>
+        <div class="modal-content rounded-lg shadow-xl p-6 w-full max-w-md max-h-[80vh] flex flex-col">
+            <h3 id="leaderboard-title" class="text-2xl font-bold text-center text-[var(--button-hover)] mb-4">Ranking de Acertos</h3>
+            <div id="leaderboard-content" class="overflow-y-auto text-sm">
+                 <p id="leaderboard-loading" class="text-center text-gray-500">A carregar recordes...</p>
+            </div>
+            <div class="mt-6 text-center">
+                <button id="close-leaderboard-button" class="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Fechar</button>
+            </div>
+        </div>
+    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getDatabase, ref, push, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+        const startScreen = document.getElementById('start-screen'), mainGame = document.getElementById('main-game'), endScreen = document.getElementById('end-screen');
+        const startButton = document.getElementById('start-button'), playAgainButton = document.getElementById('play-again-button');
+        const questionDisplay = document.getElementById('question-display'), questionEmoji = document.getElementById('question-emoji'), questionText = document.getElementById('question-text');
+        const optionsGrid = document.getElementById('options-grid'), feedbackText = document.getElementById('feedback-text');
+        const playerNameInput = document.getElementById('player-name-input'), playerDisplay = document.getElementById('player-display');
+        const scoreEl = document.getElementById('score'), finalScoreEl = document.getElementById('final-score');
+        const leaderboardBtn = document.getElementById('leaderboard-btn'), leaderboardModal = document.getElementById('leaderboard-modal'), leaderboardContent = document.getElementById('leaderboard-content'), leaderboardLoading = document.getElementById('leaderboard-loading'), leaderboardTitle = document.getElementById('leaderboard-title'), closeLeaderboardButton = document.getElementById('close-leaderboard-button');
+        
+        const emotionData = { "Alegre": { emoji: "😄", situations: ["Ganhar um presente.", "Ver um amigo.", "Brincar com o animal."] }, "Triste": { emoji: "😢", situations: ["Deixar o gelado cair.", "O brinquedo partiu-se.", "Sentir saudades."] }, "Bravo": { emoji: "😠", situations: ["Pegaram no seu brinquedo.", "Levar uma bronca injusta.", "Perder num jogo."] }, "Surpreso": { emoji: "😲", situations: ["Ver uma festa surpresa.", "Ouvir um barulho.", "Ver um truque de magia."] }, "Calmo": { emoji: "😌", situations: ["Ouvir música suave.", "Receber um abraço.", "Deitar-se na cama."] }, "Ansioso": { emoji: "😟", situations: ["Esperar pela sua vez.", "Fazer uma apresentação.", "Antes de uma prova."] }, "Assustado": { emoji: "😨", situations: ["Ver um filme de terror.", "Ouvir barulho à noite.", "Perder-se num lugar."] } };
+        const mixedEmotionData = [ { situation: "É o teu 1º dia na escola nova.", emotions: ["Alegre", "Ansioso"] }, { situation: "Ganháste, mas o teu amigo caiu.", emotions: ["Alegre", "Triste"] }, { situation: "Vais mudar de casa.", emotions: ["Triste", "Surpreso"] }, { situation: "Estás a ver um filme de terror com amigos.", emotions: ["Assustado", "Alegre"] }, { situation: "Recebeste o cãozinho que querias.", emotions: ["Alegre", "Calmo"] } ];
+        
+        let selectedMode = 'classico', selectedDifficulty = 'medio', roundsOrder = [], currentRoundIndex = 0, correctAnswer = '', score = 0, playerName = 'ANONIMO';
+        
+        const firebaseConfig = { apiKey: "AIzaSyDBTrsQWc6GPq5R0Ai2KmPki3hpHbg4c6g", authDomain: "joga-cobrinha.firebaseapp.com", projectId: "joga-cobrinha", storageBucket: "joga-cobrinha.appspot.com", messagingSenderId: "849126304274", appId: "1:849126304274:web:e6855f68bd06e33e9686cb" };
+        let db;
+
+        function shuffleArray(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[a[i], a[j]] = [a[j], a[i]]; } return a; }
+        function selectOption(type, value, element) { (type === 'mode' ? document.querySelectorAll('.mode-btn') : document.querySelectorAll('.difficulty-btn')).forEach(btn => btn.classList.remove('selected')); if (type === 'mode') selectedMode = value; else selectedDifficulty = value; element.classList.add('selected'); }
+        
+        function startGame() {
+            const nameInput = playerNameInput.value.trim().toUpperCase();
+            if (nameInput) playerName = nameInput;
+            playerDisplay.textContent = playerName;
+            score = 0;
+            scoreEl.textContent = score;
+            currentRoundIndex = 0;
+            const isMixedMode = selectedMode === 'misto' || selectedMode === 'misto_inverso';
+            if (isMixedMode) { roundsOrder = shuffleArray([...Array(mixedEmotionData.length).keys()]); } else { roundsOrder = shuffleArray(Object.keys(emotionData)); }
+            startScreen.classList.add('hidden');
+            endScreen.classList.add('hidden');
+            mainGame.classList.remove('hidden');
+            displayRound();
+        }
+        
+        function displayRound() {
+            feedbackText.textContent = '';
+            optionsGrid.innerHTML = '';
+            optionsGrid.className = 'grid gap-4 md:gap-6';
+            questionDisplay.className = 'mb-8 p-6 bg-[var(--card-color)] rounded-2xl shadow-md min-h-[150px] flex items-center justify-center';
+            if (selectedMode === 'classico') displayClassicRound();
+            else if (selectedMode === 'inverso') displayInverseRound();
+            else if (selectedMode === 'misto') displayMistoRound();
+            else if (selectedMode === 'misto_inverso') displayMistoInversoRound();
+        }
+        
+        function getOptions(correct, source, count) { shuffleArray(source); const finalOptions = [correct]; for (let i = 0; finalOptions.length < count; i++) { if (source[i] && !finalOptions.includes(source[i])) { finalOptions.push(source[i]); } } return shuffleArray(finalOptions); }
+        function adjustGridLayout(count) { if(count > 3 || (count > 2 && (selectedMode.includes('misto')))) { optionsGrid.classList.add('grid-cols-2'); } else { optionsGrid.classList.add('grid-cols-1', 'md:grid-cols-3'); } }
+        function createCard(content, type) { const card = document.createElement('div'); card.className = 'option-card bg-[var(--card-color)] rounded-2xl shadow-md cursor-pointer'; card.dataset.value = content; if (type === 'text') card.innerHTML = `<p class="text-lg font-medium">${content}</p>`; else card.textContent = content; card.addEventListener('click', () => handleSelection(card)); optionsGrid.appendChild(card); }
+        
+        function handleSelection(card) {
+            const isCorrect = card.dataset.value === correctAnswer;
+            document.querySelectorAll('.option-card').forEach(c => c.style.pointerEvents = 'none');
+            if (isCorrect) {
+                feedbackText.textContent = "Muito bem!";
+                feedbackText.style.color = 'green';
+                card.classList.add('correct-answer');
+                score++;
+                scoreEl.textContent = score;
+                setTimeout(nextStep, 1500);
+            } else {
+                feedbackText.textContent = "Tente outra vez.";
+                feedbackText.style.color = 'orange';
+                card.classList.add('incorrect-answer');
+                document.querySelectorAll('.option-card').forEach(c => { if (c.dataset.value === correctAnswer) c.classList.add('correct-answer'); });
+                setTimeout(nextStep, 2500);
+            }
+        }
+        
+        function nextStep() { currentRoundIndex++; if (currentRoundIndex < roundsOrder.length) displayRound(); else endGame(); }
+        
+        function endGame() {
+            mainGame.classList.add('hidden');
+            endScreen.classList.remove('hidden');
+            finalScoreEl.textContent = score;
+            saveScore(playerName, score, `${selectedMode}-${selectedDifficulty}`);
+        }
+        
+        function displayClassicRound() { questionEmoji.classList.remove('hidden'); questionText.classList.add('hidden'); const o = { facil: 2, medio: 3, dificil: 4 }; adjustGridLayout(o[selectedDifficulty]); const correctEmotionName = roundsOrder[currentRoundIndex]; const d = emotionData[correctEmotionName]; correctAnswer = d.situations[Math.floor(Math.random() * d.situations.length)]; let i = Object.values(emotionData).flatMap(e => e.situations).filter(s => s !== correctAnswer); const f = getOptions(correctAnswer, i, o[selectedDifficulty]); questionEmoji.textContent = d.emoji; f.forEach(s => createCard(s, 'text')); }
+        function displayInverseRound() { optionsGrid.classList.add("single-emoji"); questionEmoji.classList.add('hidden'); questionText.classList.remove('hidden'); const o = { facil: 2, medio: 3, dificil: 4 }; adjustGridLayout(o[selectedDifficulty]); const correctEmotionName = roundsOrder[currentRoundIndex]; correctAnswer = emotionData[correctEmotionName].emoji; const s = emotionData[correctEmotionName].situations[Math.floor(Math.random() * emotionData[correctEmotionName].situations.length)]; questionText.textContent = s; let i = Object.values(emotionData).map(e => e.emoji).filter(em => em !== correctAnswer); const f = getOptions(correctAnswer, i, o[selectedDifficulty]); f.forEach(e => createCard(e, 'emoji')); }
+        function displayMistoRound() { optionsGrid.classList.add("pair-emoji"); questionEmoji.classList.add('hidden'); questionText.classList.remove('hidden'); const o = { facil: 2, medio: 3, dificil: 4 }; adjustGridLayout(o[selectedDifficulty]); const r = mixedEmotionData[roundsOrder[currentRoundIndex]]; questionText.textContent = r.situation; const c = r.emotions.map(n => emotionData[n].emoji).sort(); correctAnswer = c.join(' '); let a = Object.values(emotionData).map(e => e.emoji), n = []; while (n.length < o[selectedDifficulty] - 1) { let p = shuffleArray([...a]).slice(0, 2).sort(), s = p.join(' '); if (s !== correctAnswer && !n.includes(s)) n.push(s); } const f = [correctAnswer, ...n]; shuffleArray(f).forEach(p => createCard(p, 'emoji-pair')); }
+        function displayMistoInversoRound() { questionDisplay.classList.add('emoji-pair-question'); questionEmoji.classList.add('hidden'); questionText.classList.remove('hidden'); const o = { facil: 2, medio: 3, dificil: 4 }; adjustGridLayout(o[selectedDifficulty]); const r = mixedEmotionData[roundsOrder[currentRoundIndex]]; correctAnswer = r.situation; const e = r.emotions.map(n => emotionData[n].emoji).sort().join(' '); questionText.textContent = e; let a = mixedEmotionData.map(d => d.situation).concat(Object.values(emotionData).flatMap(e => e.situations)), i = a.filter(s => s !== correctAnswer); const f = getOptions(correctAnswer, i, o[selectedDifficulty]); f.forEach(s => createCard(s, 'text')); }
+        
+        async function initializeFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getDatabase(app);
+                const auth = getAuth(app);
+                await signInAnonymously(auth);
+                startButton.disabled = false;
+                startButton.textContent = "Começar";
+            } catch (error) { 
+                startButton.textContent = "Erro de Conexão";
+                console.error("Erro ao inicializar o Firebase:", error); 
+            }
+        }
+        function saveScore(name, scoreValue, mode) { if (!db || scoreValue < 0) return; const leaderboardRef = ref(db, `public/leaderboard-conectaemocoes-${mode}`); push(leaderboardRef, { name, score: scoreValue, timestamp: serverTimestamp() }); }
+        function listenForLeaderboardUpdates(mode) {
+            const leaderboardRef = ref(db, `public/leaderboard-conectaemocoes-${mode}`);
+            onValue(leaderboardRef, (snapshot) => {
+                const scoresData = snapshot.val() || {};
+                const allScores = Object.values(scoresData);
+                const bestScores = new Map();
+                allScores.forEach(s => { const existing = bestScores.get(s.name); if (!existing || s.score > existing.score) bestScores.set(s.name, s); });
+                const uniqueBestScores = Array.from(bestScores.values()).sort((a, b) => b.score - a.score);
+                renderLeaderboard(uniqueBestScores, mode);
+            });
+        }
+        function renderLeaderboard(scores, mode) {
+            leaderboardTitle.textContent = `Ranking: ${mode.replace('_', ' ').replace('-', ' ')}`;
+            leaderboardLoading.classList.add('hidden');
+            if (scores.length === 0) { leaderboardContent.innerHTML = '<p class="text-center text-gray-500">Nenhum recorde ainda.</p>'; return; }
+            let tableHTML = `<table class="w-full text-left"><thead class="text-xs text-[var(--button-hover)] uppercase"><tr><th class="px-2 py-2">#</th><th class="px-4 py-2">Nome</th><th class="px-4 py-2 text-right">Acertos</th></tr></thead><tbody>`;
+            scores.slice(0, 20).forEach((s, index) => { tableHTML += `<tr class="border-b"><td class="px-2 py-2 font-bold">${index + 1}</td><td class="px-4 py-2">${s.name}</td><td class="px-4 py-2 text-right font-bold">${s.score}</td></tr>`; });
+            tableHTML += '</tbody></table>';
+            leaderboardContent.innerHTML = tableHTML;
+        }
+
+        startButton.addEventListener('click', startGame);
+        playAgainButton.addEventListener('click', () => { endScreen.classList.add('hidden'); startScreen.classList.remove('hidden'); });
+        document.querySelectorAll('.mode-btn').forEach(btn => btn.addEventListener('click', () => selectOption('mode', btn.dataset.mode, btn)));
+        document.querySelectorAll('.difficulty-btn').forEach(btn => btn.addEventListener('click', () => selectOption('difficulty', btn.dataset.difficulty, btn)));
+        leaderboardBtn.addEventListener('click', () => { listenForLeaderboardUpdates(`${selectedMode}-${selectedDifficulty}`); leaderboardModal.classList.remove('hidden'); });
+        closeLeaderboardButton.addEventListener('click', () => leaderboardModal.classList.add('hidden'));
+
+        selectOption('mode', 'classico', document.querySelector('[data-mode="classico"]'));
+        selectOption('difficulty', 'medio', document.querySelector('[data-difficulty="medio"]'));
+        window.onload = initializeFirebase;
+    </script>
+</body>
+</html>

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adivinhe o Personagem Bíblico</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="w-full max-w-lg bg-white p-8 rounded-2xl shadow-lg text-center">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2">Adivinhe o Personagem</h1>
+        <p class="text-gray-500 mb-6">Leia as dicas e tente adivinhar!</p>
+
+        <div id="game-area">
+            <div id="hints-container" class="bg-gray-50 min-h-[120px] p-4 rounded-lg mb-4 text-left space-y-2">
+                <!-- Dicas aparecerão aqui -->
+            </div>
+
+            <div class="flex flex-col sm:flex-row gap-2 mb-4">
+                <input type="text" id="guess-input" placeholder="Digite o nome do personagem..." class="flex-grow p-3 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <button id="guess-btn" class="bg-blue-600 text-white font-bold py-3 px-5 rounded-lg hover:bg-blue-700 transition">Adivinhar</button>
+            </div>
+            
+            <div class="flex flex-col sm:flex-row gap-2">
+                 <button id="hint-btn" class="w-full bg-green-500 text-white font-bold py-3 px-5 rounded-lg hover:bg-green-600 transition">Nova Dica</button>
+                 <button id="next-character-btn" class="w-full bg-gray-500 text-white font-bold py-3 px-5 rounded-lg hover:bg-gray-600 transition">Próximo Personagem</button>
+            </div>
+           
+            <div id="message" class="mt-4 text-lg font-semibold h-8"></div>
+        </div>
+    </div>
+
+    <script>
+        const characters = [
+            {
+                name: "Moisés",
+                hints: [
+                    "Fui encontrado num cesto no rio.",
+                    "Fui criado como um príncipe do Egito.",
+                    "Deus me falou através de uma sarça ardente.",
+                    "Liderei o povo de Israel para fora do Egito e recebi os Dez Mandamentos."
+                ]
+            },
+            {
+                name: "Davi",
+                hints: [
+                    "Eu era um pastor de ovelhas.",
+                    "Derrotei um gigante com uma funda e uma pedra.",
+                    "Escrevi muitos Salmos.",
+                    "Fui o segundo rei de Israel."
+                ]
+            },
+            {
+                name: "Ester",
+                hints: [
+                    "Era uma jovem judia que vivia na Pérsia.",
+                    "Venci um concurso de beleza e me tornei rainha.",
+                    "Arrisquei minha vida para salvar meu povo de um plano maligno.",
+                    "Meu tio se chamava Mardoqueu."
+                ]
+            },
+            {
+                name: "Sansão",
+                hints: [
+                    "Recebi uma força extraordinária de Deus.",
+                    "Meu segredo estava em meu cabelo, que nunca era cortado.",
+                    "Fui traído por Dalila.",
+                    "Derrubei um templo filisteu com minha força."
+                ]
+            }
+        ];
+
+        let currentCharacter;
+        let currentHintIndex;
+        let shuffledCharacters;
+        let currentCharacterIndex = 0;
+
+        const hintsContainer = document.getElementById('hints-container');
+        const guessInput = document.getElementById('guess-input');
+        const guessBtn = document.getElementById('guess-btn');
+        const hintBtn = document.getElementById('hint-btn');
+        const nextCharacterBtn = document.getElementById('next-character-btn');
+        const message = document.getElementById('message');
+
+        function normalizeString(str) {
+            return str.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        }
+
+        function setupNewCharacter() {
+            if (currentCharacterIndex >= shuffledCharacters.length) {
+                // Reinicia se todos os personagens foram usados
+                shuffledCharacters = characters.sort(() => Math.random() - 0.5);
+                currentCharacterIndex = 0;
+            }
+            
+            currentCharacter = shuffledCharacters[currentCharacterIndex];
+            currentCharacterIndex++;
+            currentHintIndex = 0;
+            
+            hintsContainer.innerHTML = '';
+            guessInput.value = '';
+            message.textContent = '';
+            message.className = 'mt-4 text-lg font-semibold h-8';
+            
+            guessInput.disabled = false;
+            guessBtn.disabled = false;
+            hintBtn.disabled = false;
+            
+            revealHint();
+        }
+
+        function revealHint() {
+            if (currentHintIndex < currentCharacter.hints.length) {
+                const hintElement = document.createElement('p');
+                hintElement.textContent = `Dica #${currentHintIndex + 1}: ${currentCharacter.hints[currentHintIndex]}`;
+                hintElement.classList.add('text-gray-700');
+                hintsContainer.appendChild(hintElement);
+                currentHintIndex++;
+            }
+            if (currentHintIndex >= currentCharacter.hints.length) {
+                hintBtn.disabled = true;
+            }
+        }
+
+        function checkGuess() {
+            const userGuess = normalizeString(guessInput.value);
+            const correctAnswer = normalizeString(currentCharacter.name);
+
+            if (userGuess === correctAnswer) {
+                message.textContent = `Correto! O personagem era ${currentCharacter.name}.`;
+                message.classList.add('text-green-600');
+                guessInput.disabled = true;
+                guessBtn.disabled = true;
+                hintBtn.disabled = true;
+            } else {
+                message.textContent = 'Tente novamente!';
+                message.classList.add('text-red-600');
+                setTimeout(() => {
+                    message.textContent = '';
+                    message.classList.remove('text-red-600');
+                }, 2000);
+            }
+        }
+
+        // Event Listeners
+        hintBtn.addEventListener('click', revealHint);
+        guessBtn.addEventListener('click', checkGuess);
+        guessInput.addEventListener('keyup', (event) => {
+            if (event.key === 'Enter') {
+                checkGuess();
+            }
+        });
+        nextCharacterBtn.addEventListener('click', setupNewCharacter);
+        
+        // Initial setup
+        shuffledCharacters = characters.sort(() => Math.random() - 0.5);
+        setupNewCharacter();
+    </script>
+</body>
+</html>
+

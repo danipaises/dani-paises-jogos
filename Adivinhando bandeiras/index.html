@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Adivinhação: Bandeiras</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+        }
+        
+        .background-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .moving-flag {
+            position: absolute;
+            color: #e5e7eb;
+            opacity: 0.6;
+            animation: floatUp 25s infinite linear;
+            bottom: -50px; 
+        }
+
+        @keyframes floatUp {
+            from { transform: translateY(0); }
+            to { transform: translateY(-110vh); }
+        }
+        
+        .game-card, .start-card {
+            position: relative; 
+            z-index: 10;
+        }
+
+        .option-button {
+            transition: all 0.2s ease-in-out;
+        }
+        .option-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .correct {
+            background-color: #22c55e !important;
+            color: white;
+            border-color: #16a34a;
+        }
+        .incorrect {
+            background-color: #ef4444 !important;
+            color: white;
+            border-color: #dc2626;
+        }
+        #flag-image {
+            object-fit: cover;
+            border-radius: 0.75rem; 
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border: 1px solid #e5e7eb; 
+        }
+        .modal-container {
+            position: relative;
+            z-index: 1000;
+        }
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 40;
+        }
+        .modal-content {
+            z-index: 50;
+        }
+        #toast-notification {
+            transition: opacity 0.5s, transform 0.5s;
+        }
+        @keyframes shake {
+          10%, 90% { transform: translate3d(-1px, 0, 0); }
+          20%, 80% { transform: translate3d(2px, 0, 0); }
+          30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+          40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+        .shake {
+          animation: shake 0.82s cubic-bezier(.36,.07,.19,.97) both;
+        }
+        #player-name-input {
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <!-- Container Principal -->
+    <div class="w-screen h-screen flex items-center justify-center p-2 sm:p-4 relative">
+        <div class="background-container" id="background-animation"></div>
+
+        <!-- TELA DE INÍCIO -->
+        <div id="start-screen" class="start-card bg-white rounded-2xl shadow-xl w-full max-w-md p-6 text-center">
+            <h1 class="text-3xl font-bold text-gray-800">Adivinhe a Bandeira</h1>
+            <p id="start-message" class="text-gray-600 mt-2">Digite o seu nome para começar</p>
+            <input type="text" id="player-name-input" placeholder="SEU NOME" class="w-full border-gray-300 rounded-md mt-6 p-3 text-center focus:ring-indigo-500 focus:border-indigo-500">
+            <button id="start-game-button" class="w-full mt-3 bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 transition shadow-lg disabled:opacity-50" disabled>
+                A Ligar...
+            </button>
+            <button id="anonymous-button" class="w-full mt-2 bg-gray-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-gray-700 transition shadow-lg">
+                Continuar Anónimo
+            </button>
+        </div>
+        
+        <!-- TELA DE SELEÇÃO DE MODO -->
+        <div id="mode-selection-screen" class="start-card bg-white rounded-2xl shadow-xl w-full max-w-md p-6 text-center hidden">
+            <h2 class="text-2xl font-bold text-gray-800">Escolha um Modo de Jogo</h2>
+            <div class="mt-6 space-y-3">
+                <button data-mode="classic" class="mode-button w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition shadow-lg">
+                    Modo Clássico
+                </button>
+                <button id="timed-mode-button" class="w-full bg-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-purple-700 transition shadow-lg">
+                    Modo Contra o Tempo
+                </button>
+            </div>
+        </div>
+        
+        <!-- TELA DE DIFICULDADE (CONTRA O TEMPO) -->
+        <div id="difficulty-selection-screen" class="start-card bg-white rounded-2xl shadow-xl w-full max-w-md p-6 text-center hidden">
+            <h2 class="text-2xl font-bold text-gray-800">Contra o Tempo</h2>
+             <p class="text-gray-600 mt-2">Acerte o máximo de bandeiras que conseguir!</p>
+            <div class="mt-6 space-y-3">
+                <button data-mode="timed-easy" data-time="120" class="mode-button w-full bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition shadow-lg">
+                    Fácil (2 minutos)
+                </button>
+                <button data-mode="timed-medium" data-time="60" class="mode-button w-full bg-yellow-500 text-white font-bold py-3 px-6 rounded-lg hover:bg-yellow-600 transition shadow-lg">
+                    Médio (1 minuto)
+                </button>
+                <button data-mode="timed-hard" data-time="30" class="mode-button w-full bg-red-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-red-700 transition shadow-lg">
+                    Difícil (30 segundos)
+                </button>
+            </div>
+        </div>
+
+        <!-- TELA DO JOGO -->
+        <div id="game-container" class="game-card bg-white rounded-2xl shadow-xl w-full max-w-md h-full sm:h-auto sm:max-h-[95vh] flex-col p-4 hidden">
+            
+            <header class="text-center shrink-0">
+                 <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">Adivinhe a Bandeira</h1>
+                 <p class="text-gray-600 font-semibold">Jogador: <span id="player-display" class="text-indigo-600"></span></p>
+                 <div id="timer-display" class="hidden text-2xl font-bold text-purple-700 my-2"></div>
+                 <div id="scoreboard" class="flex justify-center space-x-4 text-gray-600 mt-2 font-semibold text-sm">
+                    <span>Acertos: <span id="score">0</span></span>
+                    <span>Erros: <span id="errors">0</span></span>
+                 </div>
+                 <button id="view-leaderboard-button" class="mt-2 text-indigo-600 hover:text-indigo-800 font-semibold text-sm">Ver e Salvar Recordes do Modo</button>
+            </header>
+
+            <main id="game-area" class="flex-grow flex flex-col justify-center min-h-0 py-2">
+                <div class="flex justify-center mb-4">
+                     <img id="flag-image" src="" alt="Bandeira para adivinhar" class="bg-gray-200 w-full max-w-[280px] h-[175px]">
+                </div>
+                <div id="options" class="grid grid-cols-2 gap-3"></div>
+                <div class="mt-4">
+                    <p id="result" class="text-center h-8 text-xl font-bold"></p>
+                    <button id="next-button" class="w-full bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition shadow-lg hidden mt-2">
+                        Próxima Rodada
+                    </button>
+                </div>
+            </main>
+            
+            <div id="end-game-screen" class="hidden flex-grow flex-col items-center justify-center text-center">
+                <h2 id="end-game-title" class="text-3xl font-bold text-gray-800">Fim de Jogo!</h2>
+                <p id="final-score" class="text-xl font-bold mt-4"></p>
+                <button id="final-save-score-button" class="w-full max-w-xs mt-6 bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 transition shadow-lg">
+                    Salvar Recorde
+                </button>
+                <button id="restart-button" class="w-full max-w-xs mt-4 bg-green-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-green-700 transition shadow-lg">
+                    Jogar Novamente
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container dos Modais e Notificações -->
+    <div id="overlays" class="modal-container">
+        <div id="toast-notification" class="fixed bottom-5 right-5 text-white py-2 px-4 rounded-lg shadow-lg hidden opacity-0"></div>
+        <div id="leaderboard-modal" class="hidden fixed inset-0 items-center justify-center">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content bg-white rounded-lg shadow-xl p-6 w-full max-w-lg max-h-[80vh] flex flex-col">
+                <h3 id="leaderboard-title" class="text-2xl font-bold text-center text-gray-800 mb-4">Ranking de Recordes</h3>
+                <div id="leaderboard-content" class="overflow-y-auto">
+                     <p id="leaderboard-loading" class="text-center text-gray-500">A carregar recordes...</p>
+                </div>
+                <div class="mt-6 text-center">
+                    <button id="close-leaderboard-button" class="px-6 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getDatabase, ref, set, remove, onValue, serverTimestamp, get, push } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+
+        // --- ELEMENTOS DO DOM ---
+        const startScreen = document.getElementById('start-screen');
+        const modeSelectionScreen = document.getElementById('mode-selection-screen');
+        const difficultySelectionScreen = document.getElementById('difficulty-selection-screen');
+        const gameContainer = document.getElementById('game-container');
+        const playerNameInput = document.getElementById('player-name-input');
+        const startGameButton = document.getElementById('start-game-button');
+        const anonymousButton = document.getElementById('anonymous-button');
+        const startMessage = document.getElementById('start-message');
+        const playerDisplay = document.getElementById('player-display');
+        const timerDisplay = document.getElementById('timer-display');
+        const flagImageElement = document.getElementById('flag-image');
+        const optionsContainer = document.getElementById('options');
+        const nextButton = document.getElementById('next-button');
+        const resultElement = document.getElementById('result');
+        const scoreElement = document.getElementById('score');
+        const errorsElement = document.getElementById('errors');
+        const gameArea = document.getElementById('game-area');
+        const endGameScreen = document.getElementById('end-game-screen');
+        const endGameTitle = document.getElementById('end-game-title');
+        const finalScoreElement = document.getElementById('final-score');
+        const finalSaveScoreButton = document.getElementById('final-save-score-button');
+        const restartButton = document.getElementById('restart-button');
+        const viewLeaderboardButton = document.getElementById('view-leaderboard-button');
+        const leaderboardModal = document.getElementById('leaderboard-modal');
+        const leaderboardTitle = document.getElementById('leaderboard-title');
+        const leaderboardContent = document.getElementById('leaderboard-content');
+        const leaderboardLoading = document.getElementById('leaderboard-loading');
+        const closeLeaderboardButton = document.getElementById('close-leaderboard-button');
+        const backgroundContainer = document.getElementById('background-animation');
+        const toastElement = document.getElementById('toast-notification');
+        
+        // --- CONFIGURAÇÃO DO FIREBASE ---
+        let db;
+        const firebaseConfig = {
+          apiKey: "AIzaSyB9uHMtQAejetcLZYJJLWsMmDIAJlIubq0",
+          authDomain: "dani-paises-record.firebaseapp.com",
+          databaseURL: "https://dani-paises-record-default-rtdb.firebaseio.com",
+          projectId: "dani-paises-record",
+          storageBucket: "dani-paises-record.firebasestorage.app",
+          messagingSenderId: "453701705796",
+          appId: "1:453701705796:web:1209d91652671849ce9c11"
+        };
+        let nameToCheck = '';
+
+        async function initializeFirebase() {
+            try {
+                const app = initializeApp(firebaseConfig);
+                db = getDatabase(app);
+                const auth = getAuth(app);
+                await signInAnonymously(auth);
+                startGameButton.disabled = false;
+                startGameButton.textContent = "Iniciar Jogo";
+            } catch (error) { 
+                startMessage.textContent = "Erro de Ligação. Verifique a consola.";
+                startGameButton.classList.add('bg-red-500');
+                console.error("Erro ao inicializar o Firebase:", error); 
+            }
+        }
+
+        // --- DADOS DOS PAÍSES ---
+        const ALL_COUNTRIES = [
+            { name: 'Afeganistão', flag: 'https://flagcdn.com/w320/af.png' }, { name: 'África do Sul', flag: 'https://flagcdn.com/w320/za.png' }, { name: 'Albânia', flag: 'https://flagcdn.com/w320/al.png' }, { name: 'Alemanha', flag: 'https://flagcdn.com/w320/de.png' }, { name: 'Andorra', flag: 'https://flagcdn.com/w320/ad.png' }, { name: 'Angola', flag: 'https://flagcdn.com/w320/ao.png' }, { name: 'Arábia Saudita', flag: 'https://flagcdn.com/w320/sa.png' }, { name: 'Argélia', flag: 'https://flagcdn.com/w320/dz.png' }, { name: 'Argentina', flag: 'https://flagcdn.com/w320/ar.png' }, { name: 'Arménia', flag: 'https://flagcdn.com/w320/am.png' }, { name: 'Austrália', flag: 'https://flagcdn.com/w320/au.png' }, { name: 'Áustria', flag: 'https://flagcdn.com/w320/at.png' }, { name: 'Azerbaijão', flag: 'https://flagcdn.com/w320/az.png' }, { name: 'Bangladesh', flag: 'https://flagcdn.com/w320/bd.png' }, { name: 'Bélgica', flag: 'https://flagcdn.com/w320/be.png' }, { name: 'Bielorrússia', flag: 'https://flagcdn.com/w320/by.png' }, { name: 'Bolívia', flag: 'https://flagcdn.com/w320/bo.png' }, { name: 'Bósnia e Herzegovina', flag: 'https://flagcdn.com/w320/ba.png' }, { name: 'Brasil', flag: 'https://flagcdn.com/w320/br.png' }, { name: 'Bulgária', flag: 'https://flagcdn.com/w320/bg.png' }, { name: 'Camarões', flag: 'https://flagcdn.com/w320/cm.png' }, { name: 'Canadá', flag: 'https://flagcdn.com/w320/ca.png' }, { name: 'Catar', flag: 'https://flagcdn.com/w320/qa.png' }, { name: 'Cazaquistão', flag: 'https://flagcdn.com/w320/kz.png' }, { name: 'Chile', flag: 'https://flagcdn.com/w320/cl.png' }, { name: 'China', flag: 'https://flagcdn.com/w320/cn.png' }, { name: 'Chipre', flag: 'https://flagcdn.com/w320/cy.png' }, { name: 'Colômbia', flag: 'https://flagcdn.com/w320/co.png' }, { name: 'Coreia do Sul', flag: 'https://flagcdn.com/w320/kr.png' }, { name: 'Costa do Marfim', flag: 'https://flagcdn.com/w320/ci.png' }, { name: 'Costa Rica', flag: 'https://flagcdn.com/w320/cr.png' }, { name: 'Croácia', flag: 'https://flagcdn.com/w320/hr.png' }, { name: 'Cuba', flag: 'https://flagcdn.com/w320/cu.png' }, { name: 'Dinamarca', flag: 'https://flagcdn.com/w320/dk.png' }, { name: 'Egito', flag: 'https://flagcdn.com/w320/eg.png' }, { name: 'Emirados Árabes Unidos', flag: 'https://flagcdn.com/w320/ae.png' }, { name: 'Equador', flag: 'https://flagcdn.com/w320/ec.png' }, { name: 'Eslováquia', flag: 'https://flagcdn.com/w320/sk.png' }, { name: 'Eslovénia', flag: 'https://flagcdn.com/w320/si.png' }, { name: 'Espanha', flag: 'https://flagcdn.com/w320/es.png' }, { name: 'Estados Unidos', flag: 'https://flagcdn.com/w320/us.png' }, { name: 'Estónia', flag: 'https://flagcdn.com/w320/ee.png' }, { name: 'Filipinas', flag: 'https://flagcdn.com/w320/ph.png' }, { name: 'Finlândia', flag: 'https://flagcdn.com/w320/fi.png' }, { name: 'França', flag: 'https://flagcdn.com/w320/fr.png' }, { name: 'Gana', flag: 'https://flagcdn.com/w320/gh.png' }, { name: 'Geórgia', flag: 'https://flagcdn.com/w320/ge.png' }, { name: 'Grécia', flag: 'https://flagcdn.com/w320/gr.png' }, { name: 'Guatemala', flag: 'https://flagcdn.com/w320/gt.png' }, { name: 'Honduras', flag: 'https://flagcdn.com/w320/hn.png' }, { name: 'Hungria', flag: 'https://flagcdn.com/w320/hu.png' }, { name: 'Iémen', flag: 'https://flagcdn.com/w320/ye.png' }, { name: 'Índia', flag: 'https://flagcdn.com/w320/in.png' }, { name: 'Indonésia', flag: 'https://flagcdn.com/w320/id.png' }, { name: 'Irão', flag: 'https://flagcdn.com/w320/ir.png' }, { name: 'Iraque', flag: 'https://flagcdn.com/w320/iq.png' }, { name: 'Irlanda', flag: 'https://flagcdn.com/w320/ie.png' }, { name: 'Islândia', flag: 'https://flagcdn.com/w320/is.png' }, { name: 'Israel', flag: 'https://flagcdn.com/w320/il.png' }, { name: 'Itália', flag: 'https://flagcdn.com/w320/it.png' }, { name: 'Jamaica', flag: 'https://flagcdn.com/w320/jm.png' }, { name: 'Japão', flag: 'https://flagcdn.com/w320/jp.png' }, { name: 'Jordânia', flag: 'https://flagcdn.com/w320/jo.png' }, { name: 'Letónia', flag: 'https://flagcdn.com/w320/lv.png' }, { name: 'Líbano', flag: 'https://flagcdn.com/w320/lb.png' }, { name: 'Lituânia', flag: 'https://flagcdn.com/w320/lt.png' }, { name: 'Luxemburgo', flag: 'https://flagcdn.com/w320/lu.png' }, { name: 'Macedónia do Norte', flag: 'https://flagcdn.com/w320/mk.png' }, { name: 'Malásia', flag: 'https://flagcdn.com/w320/my.png' }, { name: 'Malta', flag: 'https://flagcdn.com/w320/mt.png' }, { name: 'Marrocos', flag: 'https://flagcdn.com/w320/ma.png' }, { name: 'México', flag: 'https://flagcdn.com/w320/mx.png' }, { name: 'Moçambique', flag: 'https://flagcdn.com/w320/mz.png' }, { name: 'Moldávia', flag: 'https://flagcdn.com/w320/md.png' }, { name: 'Mónaco', flag: 'https://flagcdn.com/w320/mc.png' }, { name: 'Mongólia', flag: 'https://flagcdn.com/w320/mn.png' }, { name: 'Montenegro', flag: 'https://flagcdn.com/w320/me.png' }, { name: 'Nepal', flag: 'https://flagcdn.com/w320/np.png' }, { name: 'Nigéria', flag: 'https://flagcdn.com/w320/ng.png' }, { name: 'Noruega', flag: 'https://flagcdn.com/w320/no.png' }, { name: 'Nova Zelândia', flag: 'https://flagcdn.com/w320/nz.png' }, { name: 'Países Baixos', flag: 'https://flagcdn.com/w320/nl.png' }, { name: 'Panamá', flag: 'https://flagcdn.com/w320/pa.png' }, { name: 'Paquistão', flag: 'https://flagcdn.com/w320/pk.png' }, { name: 'Paraguai', flag: 'https://flagcdn.com/w320/py.png' }, { name: 'Peru', flag: 'https://flagcdn.com/w320/pe.png' }, { name: 'Polónia', flag: 'https://flagcdn.com/w320/pl.png' }, { name: 'Portugal', flag: 'https://flagcdn.com/w320/pt.png' }, { name: 'Quénia', flag: 'https://flagcdn.com/w320/ke.png' }, { name: 'Reino Unido', flag: 'https://flagcdn.com/w320/gb.png' }, { name: 'República Checa', flag: 'https://flagcdn.com/w320/cz.png' }, { name: 'Roménia', flag: 'https://flagcdn.com/w320/ro.png' }, { name: 'Rússia', flag: 'https://flagcdn.com/w320/ru.png' }, { name: 'San Marino', flag: 'https://flagcdn.com/w320/sm.png' }, { name: 'Senegal', flag: 'https://flagcdn.com/w320/sn.png' }, { name: 'Sérvia', flag: 'https://flagcdn.com/w320/rs.png' }, { name: 'Singapura', flag: 'https://flagcdn.com/w320/sg.png' }, { name: 'Síria', flag: 'https://flagcdn.com/w320/sy.png' }, { name: 'Sri Lanka', flag: 'https://flagcdn.com/w320/lk.png' }, { name: 'Suécia', flag: 'https://flagcdn.com/w320/se.png' }, { name: 'Suíça', flag: 'https://flagcdn.com/w320/ch.png' }, { name: 'Tailândia', flag: 'https://flagcdn.com/w320/th.png' }, { name: 'Tunísia', flag: 'https://flagcdn.com/w320/tn.png' }, { name: 'Turquia', flag: 'https://flagcdn.com/w320/tr.png' }, { name: 'Ucrânia', flag: 'https://flagcdn.com/w320/ua.png' }, { name: 'Uruguai', flag: 'https://flagcdn.com/w320/uy.png' }, { name: 'Vaticano', flag: 'https://flagcdn.com/w320/va.png' }, { name: 'Venezuela', flag: 'https://flagcdn.com/w320/ve.png' }, { name: 'Vietname', flag: 'https://flagcdn.com/w320/vn.png' }
+        ];
+        
+        let score, errors, currentCorrectAnswer, answerLocked, gameMode, timerInterval, timeRemaining;
+        let unseenCountries = [], currentRoundOptions = [];
+
+        function initializeGame(name, mode, timeLimit = null) {
+            nameToCheck = name.toUpperCase();
+            gameMode = mode;
+            playerDisplay.textContent = nameToCheck;
+            startScreen.classList.add('hidden');
+            modeSelectionScreen.classList.add('hidden');
+            difficultySelectionScreen.classList.add('hidden');
+            gameContainer.classList.add('flex');
+            gameContainer.classList.remove('hidden');
+            startGame(timeLimit);
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1));[array[i], array[j]] = [array[j], array[i]]; }
+            return array;
+        }
+
+        function startGame(timeLimit) {
+            score = 0;
+            errors = 0;
+            unseenCountries = shuffleArray([...ALL_COUNTRIES]);
+            updateScoreboard();
+            gameArea.classList.remove('hidden');
+            endGameScreen.classList.add('hidden');
+            finalSaveScoreButton.disabled = false;
+            finalSaveScoreButton.textContent = "Salvar Recorde";
+            
+            if (timeLimit) {
+                startTimer(timeLimit);
+            } else {
+                timerDisplay.classList.add('hidden');
+            }
+            newRound();
+        }
+
+        function startTimer(duration) {
+            clearInterval(timerInterval);
+            timeRemaining = duration;
+            timerDisplay.classList.remove('hidden');
+            
+            const updateTimer = () => {
+                const minutes = Math.floor(timeRemaining / 60);
+                const seconds = timeRemaining % 60;
+                timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (timeRemaining <= 0) {
+                    clearInterval(timerInterval);
+                    showEndGameScreen(true);
+                }
+                timeRemaining--;
+            };
+            
+            updateTimer();
+            timerInterval = setInterval(updateTimer, 1000);
+        }
+
+        function newRound() {
+            if (unseenCountries.length === 0 && gameMode === 'classic') {
+                showEndGameScreen();
+                return;
+            }
+            if (unseenCountries.length === 0 && gameMode.startsWith('timed')) {
+                 unseenCountries = shuffleArray([...ALL_COUNTRIES]);
+            }
+
+            answerLocked = false;
+            resultElement.textContent = '';
+            resultElement.className = 'text-center h-8 text-xl font-bold';
+            optionsContainer.innerHTML = '';
+            nextButton.classList.add('hidden');
+            const correctAnswerData = unseenCountries.pop();
+            currentCorrectAnswer = correctAnswerData.name;
+            flagImageElement.src = correctAnswerData.flag;
+            const wrongOptions = ALL_COUNTRIES.filter(c => c.name !== currentCorrectAnswer).sort(() => 0.5 - Math.random()).slice(0, 3);
+            const roundOptions = shuffleArray([...wrongOptions, correctAnswerData]);
+            currentRoundOptions = roundOptions.map(o => o.name);
+            currentRoundOptions.forEach(name => {
+                const button = document.createElement('button');
+                button.textContent = name;
+                button.classList.add('option-button', 'w-full', 'p-3', 'text-sm', 'sm:p-4', 'sm:text-base', 'border-2', 'border-gray-300', 'rounded-lg', 'font-semibold', 'text-gray-700', 'hover:bg-gray-200', 'focus:outline-none');
+                button.onclick = () => checkAnswer(button);
+                optionsContainer.appendChild(button);
+            });
+        }
+
+        function checkAnswer(selectedButton) {
+            if (answerLocked) return;
+            answerLocked = true;
+            const isCorrect = selectedButton.textContent === currentCorrectAnswer;
+            if (isCorrect) {
+                score++;
+                selectedButton.classList.add('correct');
+                resultElement.textContent = 'Correto!';
+                resultElement.className = 'text-center h-8 text-xl font-bold text-green-600';
+            } else {
+                errors++;
+                selectedButton.classList.add('incorrect');
+                resultElement.textContent = `Errado! É ${currentCorrectAnswer}.`;
+                resultElement.className = 'text-center h-8 text-xl font-bold text-red-600';
+            }
+            updateScoreboard();
+            
+            if (gameMode.startsWith('timed')) {
+                setTimeout(newRound, 800);
+            } else {
+                nextButton.classList.remove('hidden');
+            }
+        }
+
+        function updateScoreboard() {
+            scoreElement.textContent = score;
+            errorsElement.textContent = errors;
+        }
+        
+        async function showEndGameScreen(timeUp = false) {
+            clearInterval(timerInterval);
+            gameArea.classList.add('hidden');
+            endGameScreen.classList.remove('hidden');
+            endGameTitle.textContent = timeUp ? "O Tempo Acabou!" : "Fim de Jogo!";
+            finalScoreElement.textContent = `Seu placar final: ${score} acertos e ${errors} erros.`;
+            await saveCurrentScore();
+        }
+        
+        async function saveCurrentScore() {
+            const leaderboardPath = `public/leaderboard-${gameMode}`;
+            const currentLeaderboardRef = ref(db, leaderboardPath);
+            if (!db || !currentLeaderboardRef) { showToast("Erro ao salvar. Verifique a sua ligação.", true); return false; }
+            if (score === 0 && errors === 0) { 
+                if(gameMode.startsWith('timed')) {
+                    showToast("Placar de 0 não foi salvo.");
+                }
+                return false; 
+            }
+            try {
+                await push(currentLeaderboardRef, { name: nameToCheck, score, errors, timestamp: serverTimestamp() });
+                showToast("Seu recorde foi salvo!");
+                return true;
+            } catch (error) { showToast("Erro ao salvar o recorde.", true); return false; }
+        }
+        
+        function listenForLeaderboardUpdates() {
+            if (!gameMode || !db) return;
+            const leaderboardPath = `public/leaderboard-${gameMode}`;
+            const currentLeaderboardRef = ref(db, leaderboardPath);
+            
+            onValue(currentLeaderboardRef, (snapshot) => {
+                const scoresData = snapshot.val();
+                const allScores = [];
+                if (scoresData) { for (const key in scoresData) allScores.push({ id: key, ...scoresData[key] }); }
+
+                const bestScores = new Map();
+                allScores.forEach(score => {
+                    const existingScore = bestScores.get(score.name);
+                    if (!existingScore || score.score > existingScore.score || (score.score === existingScore.score && score.errors < existingScore.errors)) {
+                        bestScores.set(score.name, score);
+                    }
+                });
+
+                const uniqueBestScores = Array.from(bestScores.values());
+                uniqueBestScores.sort((a, b) => b.score - a.score || a.errors - b.errors);
+                
+                renderLeaderboard(uniqueBestScores);
+            });
+        }
+
+        function renderLeaderboard(scores) {
+            const modeNames = {
+                'classic': 'Clássico',
+                'timed-easy': 'Contra o Tempo (Fácil)',
+                'timed-medium': 'Contra o Tempo (Médio)',
+                'timed-hard': 'Contra o Tempo (Difícil)'
+            };
+            leaderboardTitle.textContent = `Ranking: ${modeNames[gameMode] || 'Recordes'}`;
+            leaderboardLoading.classList.add('hidden');
+            if (scores.length === 0) {
+                leaderboardContent.innerHTML = '<p class="text-center text-gray-500">Nenhum recorde ainda. Seja o primeiro!</p>';
+                return;
+            }
+            let tableHTML = `<table class="w-full text-sm text-left text-gray-500"><thead class="text-xs text-gray-700 uppercase bg-gray-50"><tr><th scope="col" class="px-4 py-3">#</th><th scope="col" class="px-6 py-3">Nome</th><th scope="col" class="px-6 py-3 text-center">Acertos</th><th scope="col" class="px-6 py-3 text-center">Erros</th></tr></thead><tbody>`;
+            scores.slice(0, 20).forEach((s, index) => {
+                tableHTML += `<tr class="bg-white border-b hover:bg-gray-50"><td class="px-4 py-4 font-medium text-gray-900">${index + 1}</td><th scope="row" class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap">${s.name}</th><td class="px-6 py-4 text-center text-green-600 font-bold">${s.score}</td><td class="px-6 py-4 text-center text-red-600 font-bold">${s.errors}</td></tr>`;
+            });
+            tableHTML += '</tbody></table>';
+            leaderboardContent.innerHTML = tableHTML;
+        }
+
+        function showToast(message, isError = false) {
+            toastElement.textContent = message;
+            toastElement.classList.toggle('bg-green-600', !isError);
+            toastElement.classList.toggle('bg-red-500', isError);
+            toastElement.classList.remove('hidden');
+            setTimeout(() => { toastElement.classList.remove('opacity-0'); }, 10);
+            setTimeout(() => { toastElement.classList.add('opacity-0'); setTimeout(() => { toastElement.classList.add('hidden'); }, 500); }, 3000);
+        }
+
+        function createBackgroundAnimation() {
+            if (document.querySelectorAll('.moving-flag').length > 0) return;
+            const numberOfFlags = 20;
+            const flagSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-10 h-10"><path d="M14.4 6L14 4H5v17h2v-7h5.6l.4 2h7V6h-5.6z"></path></svg>`;
+            for (let i = 0; i < numberOfFlags; i++) {
+                const flag = document.createElement('span');
+                flag.classList.add('moving-flag');
+                flag.innerHTML = flagSvg;
+                flag.style.left = `${Math.random() * 100}vw`;
+                flag.style.animationDuration = `${Math.random() * 15 + 20}s`;
+                flag.style.animationDelay = `${Math.random() * 25}s`;
+                backgroundContainer.appendChild(flag);
+            }
+        }
+        
+        function handleNameSubmission(name) {
+            nameToCheck = name;
+            startScreen.classList.add('hidden');
+            modeSelectionScreen.classList.remove('hidden');
+        }
+
+        // --- EVENT LISTENERS ---
+        startGameButton.addEventListener('click', () => {
+            const name = playerNameInput.value.trim().toUpperCase();
+            if (name) { handleNameSubmission(name); } 
+            else { playerNameInput.classList.add('shake'); setTimeout(() => playerNameInput.classList.remove('shake'), 820); }
+        });
+
+        anonymousButton.addEventListener('click', () => { 
+            handleNameSubmission('ANÓNIMO');
+        });
+
+        document.getElementById('timed-mode-button').addEventListener('click', () => {
+            modeSelectionScreen.classList.add('hidden');
+            difficultySelectionScreen.classList.remove('hidden');
+        });
+
+        document.querySelectorAll('.mode-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const mode = button.dataset.mode;
+                const time = button.dataset.time ? parseInt(button.dataset.time) : null;
+                initializeGame(nameToCheck, mode, time);
+            });
+        });
+        
+        nextButton.addEventListener('click', newRound);
+        
+        finalSaveScoreButton.addEventListener('click', async () => {
+            finalSaveScoreButton.disabled = true;
+            finalSaveScoreButton.textContent = "A salvar...";
+            await saveCurrentScore();
+            finalSaveScoreButton.textContent = "Salvo!";
+        });
+        
+        restartButton.addEventListener('click', () => {
+            gameContainer.classList.add('hidden');
+            endGameScreen.classList.add('hidden');
+            startScreen.classList.remove('hidden');
+            playerNameInput.value = '';
+        });
+        
+        viewLeaderboardButton.addEventListener('click', async () => {
+            // **ALTERAÇÃO APLICADA AQUI**
+            if (gameMode === 'classic') {
+                await saveCurrentScore();
+            }
+            listenForLeaderboardUpdates();
+            openLeaderboardModal();
+        });
+        
+        function openLeaderboardModal() { leaderboardModal.classList.add('flex'); leaderboardModal.classList.remove('hidden'); }
+        function closeLeaderboardModal() { leaderboardModal.classList.add('hidden'); leaderboardModal.classList.remove('flex'); }
+        
+        closeLeaderboardButton.addEventListener('click', closeLeaderboardModal);
+
+        window.onload = () => {
+            createBackgroundAnimation();
+            initializeFirebase();
+        };
+    </script>
+</body>
+</html>
+
