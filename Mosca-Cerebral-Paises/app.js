@@ -33,3 +33,4 @@ $$('[data-answer]').forEach(btn=>btn.onclick=()=>{$('#quizFeedback').textContent
 window.addEventListener('resize',()=>{drawBrain();drawSim();renderEvo()});
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 loadData().catch(err=>{console.error(err);document.body.insertAdjacentHTML('beforeend','<div style="position:fixed;bottom:10px;left:10px;right:10px;background:#491f28;padding:12px;border-radius:12px">Não foi possível carregar o dataset local. Use um servidor HTTP/Cloudflare, não abra o HTML diretamente como arquivo.</div>')});
+import('./real-loader.js').then(m=>m.initRealMode()).catch(err=>console.error('Modo real indisponível',err));
