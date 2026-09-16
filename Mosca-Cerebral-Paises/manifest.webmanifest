@@ -1,0 +1,12 @@
+{
+  "name": "Mosca Cerebral Países",
+  "short_name": "Mosca Cerebral",
+  "description": "Laboratório web inspirado no cérebro da Drosophila, sem backend.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0b0d14",
+  "theme_color": "#151825",
+  "icons": [
+    {"src":"./icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}
+  ]
+}
