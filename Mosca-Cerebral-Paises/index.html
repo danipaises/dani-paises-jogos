@@ -4,10 +4,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
   <meta name="theme-color" content="#151825" />
-  <meta name="description" content="Mosca Cerebral Países — laboratório web inspirado no cérebro da Drosophila." />
+  <meta name="description" content="Mosca Cerebral Países — explore o conectoma real MaleCNS v1.0 e experimentos didáticos no navegador." />
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="./styles.css" />
+  <link rel="stylesheet" href="./real/real.css" />
   <title>Mosca Cerebral Países</title>
 </head>
 <body>
@@ -20,7 +21,8 @@
     <button id="menuBtn" class="icon-btn" aria-label="Abrir menu">☰</button>
     <nav id="nav" class="nav">
       <a href="#inicio">Início</a>
-      <a href="#explorar">Explorar</a>
+      <a href="#real">Conectoma Real</a>
+      <a href="#explorar">Demo</a>
       <a href="#simulador">Simulador</a>
       <a href="#vida">Vida</a>
       <a href="#laboratorio">Laboratório</a>
@@ -33,23 +35,88 @@
   <main>
     <section id="inicio" class="hero section active">
       <div class="hero-copy">
-        <div class="eyebrow">SEM BACKEND • OFFLINE-FIRST • PWA</div>
-        <h1>Um laboratório de cérebro de mosca dentro do navegador.</h1>
-        <p>Explore circuitos, provoque estímulos, observe respostas, construa redes e teste ideias sem conta, sem Supabase e sem servidor próprio.</p>
+        <div class="eyebrow">MALECNS REAL • SEM BACKEND • PWA</div>
+        <h1>O cérebro da mosca do Google/Janelia no navegador.</h1>
+        <p>Carregue o conectoma real Male CNS v1.0, pesquise tipos de neurônios e percorra conexões sinápticas. Os outros módulos continuam como experiências didáticas locais.</p>
         <div class="hero-actions">
-          <a class="btn primary" href="#simulador">⚡ Começar simulação</a>
-          <a class="btn" href="#explorar">🧠 Explorar rede</a>
+          <a class="btn primary" href="#real">🧬 Abrir conectoma real</a>
+          <a class="btn" href="#simulador">⚡ Experimentos didáticos</a>
         </div>
-        <div class="notice">A rede incluída nesta versão é <strong>demonstrativa</strong>. Ela foi criada para testar a plataforma e não representa o conectoma científico completo da Drosophila.</div>
+        <div class="notice"><strong>Agora existem dois níveis:</strong> o modo <strong>Conectoma Real</strong> usa conectividade derivada do MaleCNS v1.0. Vida, Evolução e os simuladores simplificados são experiências educativas e não representam fielmente a fisiologia de uma mosca viva.</div>
       </div>
       <div class="hero-visual card glow">
         <canvas id="heroCanvas" width="720" height="520" aria-label="Visualização animada de uma rede neural"></canvas>
-        <div class="live-pill"><span></span> motor local ativo</div>
+        <div class="live-pill"><span></span> laboratório local ativo</div>
+      </div>
+    </section>
+
+    <section id="real" class="section panel-section real-section">
+      <div class="section-heading">
+        <div>
+          <div class="real-badge">✓ DADOS REAIS • MALE CNS v1.0</div>
+          <h2>🧬 Conectoma Real</h2>
+          <p>Este modo lê um grafo empacotado derivado do conectoma completo do sistema nervoso central da mosca macho publicado por HHMI Janelia, Google Research e colaboradores.</p>
+        </div>
+      </div>
+
+      <div class="real-source-grid">
+        <article class="card real-source">
+          <h3>De onde vêm os dados?</h3>
+          <p>O MaleCNS oficial contém mais de 166 mil neurônios. Para funcionar no navegador, este modo usa o grafo computacional empacotado do projeto open-source <strong>fly-brain</strong>, construído a partir do MaleCNS v1.0.</p>
+          <div class="real-facts">
+            <div class="real-fact"><span>Dataset oficial</span><strong>MaleCNS v1.0</strong></div>
+            <div class="real-fact"><span>Licença dos dados</span><strong>CC BY 4.0</strong></div>
+            <div class="real-fact"><span>Grafo no navegador</span><strong>165.122 neurônios</strong></div>
+            <div class="real-fact"><span>Arquivo principal</span><strong>~14,6 MB</strong></div>
+          </div>
+          <p class="real-license">Fonte científica: <a href="https://male-cns.janelia.org/" target="_blank" rel="noopener">male-cns.janelia.org</a>. Empacotamento e codec: <a href="https://github.com/Lulzx/fly-brain" target="_blank" rel="noopener">Lulzx/fly-brain</a> (MIT). Créditos completos em <a href="./THIRD_PARTY_NOTICES.md" target="_blank">THIRD_PARTY_NOTICES.md</a>.</p>
+        </article>
+
+        <article class="card real-loader">
+          <h3>Carregar o cérebro real</h3>
+          <p>O arquivo não é baixado ao abrir a página. Você decide quando carregar.</p>
+          <div class="real-heavy">⚠️ A descompactação trabalha com milhões de conexões e pode usar bastante memória. Em celular mais simples, feche outros aplicativos antes de testar.</div>
+          <button id="loadRealBrain" class="btn primary">⬇️ Baixar ~14,6 MB e carregar</button>
+          <div id="realProgress" class="real-progress">0 / 14,6 MB</div>
+          <div id="realStatus" class="real-status">Aguardando você carregar o conectoma.</div>
+        </article>
+      </div>
+
+      <div id="realWorkspace" hidden>
+        <div class="real-stats">
+          <div class="card real-stat"><span>Neurônios no grafo</span><strong id="realNeurons">—</strong></div>
+          <div class="card real-stat"><span>Conexões agregadas</span><strong id="realEdges">—</strong></div>
+          <div class="card real-stat"><span>Sinapses somadas</span><strong id="realSynapses">—</strong></div>
+          <div class="card real-stat"><span>Limiar mínimo</span><strong id="realMinWeight">—</strong></div>
+        </div>
+
+        <div class="real-tools">
+          <div class="card real-search">
+            <h3>Pesquisar neurônio</h3>
+            <p class="real-muted">Digite um tipo, como <strong>DNp01</strong>, ou um índice interno do grafo.</p>
+            <div class="real-search-row">
+              <input id="realQuery" type="search" placeholder="Ex.: DNp01" disabled />
+              <button id="realSearchBtn" class="btn" disabled>Buscar</button>
+            </div>
+            <button id="realTrace" class="btn primary" style="margin-top:12px" disabled>⚡ Propagar pelo selecionado</button>
+            <div id="realMatches" class="real-matches"><span class="real-muted">Carregue o conectoma para começar.</span></div>
+          </div>
+
+          <div id="realNeuronInfo" class="card real-inspector">
+            <h3>Conexões reais</h3>
+            <p>Selecione um neurônio para ver os parceiros de saída mais fortes e a quantidade de sinapses de cada ligação.</p>
+          </div>
+        </div>
+
+        <div class="card real-canvas-card">
+          <canvas id="realCanvas" width="1100" height="620" aria-label="Visualização de conexões reais do MaleCNS"></canvas>
+          <div class="real-caption">A visualização mostra conexões existentes no grafo MaleCNS empacotado. A função “propagar” segue estruturalmente as conexões mais fortes em até 3 saltos; ela não afirma reproduzir atividade elétrica biológica.</div>
+        </div>
       </div>
     </section>
 
     <section id="explorar" class="section panel-section">
-      <div class="section-heading"><div><div class="eyebrow">MODO 01</div><h2>🧠 Explorar</h2><p>Toque em um nó para inspecionar o circuito demonstrativo.</p></div></div>
+      <div class="section-heading"><div><div class="eyebrow">DEMO DIDÁTICA 01</div><h2>🧠 Explorar rede simplificada</h2><p>Uma pequena rede sintética para aprender a interface rapidamente. Para dados científicos, use o Conectoma Real acima.</p></div></div>
       <div class="workspace">
         <div class="card canvas-card"><canvas id="brainCanvas" width="900" height="600"></canvas></div>
         <aside class="card inspector"><h3 id="nodeTitle">Selecione um neurônio</h3><p id="nodeDescription">Clique em algum ponto colorido da rede.</p><dl id="nodeMeta" class="meta-list"></dl></aside>
@@ -57,7 +124,7 @@
     </section>
 
     <section id="simulador" class="section panel-section">
-      <div class="section-heading"><div><div class="eyebrow">MODO 02</div><h2>⚡ Simulador de estímulos</h2><p>Escolha um estímulo e veja a ativação atravessar o circuito.</p></div></div>
+      <div class="section-heading"><div><div class="eyebrow">DEMO DIDÁTICA 02</div><h2>⚡ Simulador de estímulos</h2><p>Escolha um estímulo e veja uma propagação educativa na rede simplificada.</p></div></div>
       <div class="stimuli-grid">
         <button class="stimulus card" data-stimulus="light">☀️<strong>Luz</strong><span>Entrada visual</span></button>
         <button class="stimulus card" data-stimulus="food">🍌<strong>Cheiro de comida</strong><span>Entrada olfativa</span></button>
@@ -68,33 +135,34 @@
     </section>
 
     <section id="vida" class="section panel-section">
-      <div class="section-heading"><div><div class="eyebrow">MODO 03</div><h2>🪰 Vida</h2><p>Uma mosca virtual procura comida e evita ameaças usando um controlador local simples.</p></div><button id="resetWorld" class="btn">Reiniciar mundo</button></div>
+      <div class="section-heading"><div><div class="eyebrow">EXPERIMENTO DIDÁTICO 03</div><h2>🪰 Vida</h2><p>Uma mosca virtual procura comida e evita ameaças usando um controlador local simples. Este modo não é o MaleCNS fisiológico completo.</p></div><button id="resetWorld" class="btn">Reiniciar mundo</button></div>
       <div class="card world-card"><canvas id="worldCanvas" width="1000" height="600"></canvas><div class="hud"><span id="foodCount">Comidas: 0</span><span id="ageCount">Tempo: 0s</span><span id="energyCount">Energia: 100</span></div></div>
     </section>
 
     <section id="laboratorio" class="section panel-section">
-      <div class="section-heading"><div><div class="eyebrow">MODO 04</div><h2>🧪 Laboratório</h2><p>Desative grupos funcionais e compare a resposta da mosca.</p></div></div>
+      <div class="section-heading"><div><div class="eyebrow">EXPERIMENTO DIDÁTICO 04</div><h2>🧪 Laboratório</h2><p>Desative grupos funcionais da simulação simplificada e compare resultados.</p></div></div>
       <div class="lab-layout"><div class="card lab-controls"><label><input type="checkbox" data-lab="visual" checked /> Circuito visual</label><label><input type="checkbox" data-lab="olfactory" checked /> Circuito olfativo</label><label><input type="checkbox" data-lab="motor" checked /> Circuito motor</label><label><input type="checkbox" data-lab="escape" checked /> Circuito de fuga</label><button id="labTest" class="btn primary">Executar teste</button></div><div class="card result-card"><h3>Resultado</h3><p id="labResult">Todos os circuitos estão ativos. Execute um teste.</p></div></div>
     </section>
 
     <section id="evolucao" class="section panel-section">
-      <div class="section-heading"><div><div class="eyebrow">MODO 05</div><h2>🧬 Evolução</h2><p>Gere populações virtuais e acompanhe a mudança de características ao longo das gerações.</p></div><button id="nextGeneration" class="btn primary">Nova geração</button></div>
+      <div class="section-heading"><div><div class="eyebrow">EXPERIMENTO DIDÁTICO 05</div><h2>🧬 Evolução</h2><p>Gere populações virtuais e acompanhe características ao longo das gerações.</p></div><button id="nextGeneration" class="btn primary">Nova geração</button></div>
       <div class="evo-stats"><div class="card stat"><span>Geração</span><strong id="generation">1</strong></div><div class="card stat"><span>Velocidade média</span><strong id="avgSpeed">1.00</strong></div><div class="card stat"><span>Sensibilidade</span><strong id="avgSense">1.00</strong></div><div class="card stat"><span>Sobrevivência</span><strong id="survival">50%</strong></div></div>
       <div class="card"><canvas id="evoCanvas" width="1000" height="420"></canvas></div>
     </section>
 
     <section id="construtor" class="section panel-section">
-      <div class="section-heading"><div><div class="eyebrow">MODO 06</div><h2>🧱 Construtor</h2><p>Monte uma cadeia simples de sensor → processamento → ação.</p></div></div>
+      <div class="section-heading"><div><div class="eyebrow">EXPERIMENTO DIDÁTICO 06</div><h2>🧱 Construtor</h2><p>Monte uma cadeia simples de sensor → processamento → ação.</p></div></div>
       <div class="builder"><div class="card palette"><button class="chip" data-builder="sensor">+ Sensor</button><button class="chip" data-builder="neuron">+ Neurônio</button><button class="chip" data-builder="motor">+ Motor</button><button id="clearBuilder" class="chip danger">Limpar</button></div><div id="builderBoard" class="card builder-board"><p class="muted">Adicione componentes. Eles serão conectados na ordem em que forem criados.</p></div></div>
     </section>
 
     <section id="escola" class="section panel-section">
       <div class="section-heading"><div><div class="eyebrow">MODO 07</div><h2>🎓 Escola</h2><p>Aprenda conceitos básicos e teste seus conhecimentos.</p></div></div>
-      <div class="lessons"><article class="card"><h3>O que é um conectoma?</h3><p>É um mapa de conexões entre neurônios. Ele ajuda pesquisadores a estudar como diferentes partes de um sistema nervoso se relacionam.</p></article><article class="card"><h3>Entrada → processamento → ação</h3><p>Um estímulo pode ativar sensores, atravessar circuitos de processamento e chegar a neurônios que controlam uma ação.</p></article><article class="card quiz"><h3>Quiz rápido</h3><p>Qual parte recebe primeiro um estímulo de luz nesta demonstração?</p><div class="quiz-options"><button data-answer="wrong">Motor</button><button data-answer="correct">Sensor visual</button><button data-answer="wrong">Memória</button></div><p id="quizFeedback"></p></article></div>
+      <div class="lessons"><article class="card"><h3>O que é um conectoma?</h3><p>É um mapa de conexões entre neurônios. Ele ajuda pesquisadores a estudar como diferentes partes de um sistema nervoso se relacionam.</p></article><article class="card"><h3>Mapa não é mente pronta</h3><p>O conectoma descreve a fiação. Para simular comportamento biologicamente, ainda são necessários modelos de dinâmica neural, sensores, músculos e outras propriedades.</p></article><article class="card quiz"><h3>Quiz rápido</h3><p>Qual parte do site usa conectividade derivada do MaleCNS real?</p><div class="quiz-options"><button data-answer="wrong">Evolução didática</button><button data-answer="correct">Conectoma Real</button><button data-answer="wrong">Construtor</button></div><p id="quizFeedback"></p></article></div>
     </section>
   </main>
 
-  <footer><span>🪰 Mosca Cerebral Países</span><span>Experimentos locais • sem conta • sem backend</span></footer>
+  <footer><span>🪰 Mosca Cerebral Países</span><span>MaleCNS v1.0: Janelia FlyEM + Google Research • CC BY 4.0</span></footer>
+  <script type="module" src="./real/real-ui.js"></script>
   <script type="module" src="./app.js"></script>
 </body>
 </html>
