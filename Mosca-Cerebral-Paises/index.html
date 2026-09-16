@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#151825" />
+  <meta name="description" content="Mosca Cerebral Países — laboratório web inspirado no cérebro da Drosophila." />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="./styles.css" />
+  <title>Mosca Cerebral Países</title>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#inicio" aria-label="Mosca Cerebral Países">
+      <span class="brand-mark">🪰🧠</span>
+      <span><strong>Mosca Cerebral</strong><small>Países</small></span>
+    </a>
+    <a class="btn portal-btn" href="../index.html">🎮 Portal de Jogos</a>
+    <button id="menuBtn" class="icon-btn" aria-label="Abrir menu">☰</button>
+    <nav id="nav" class="nav">
+      <a href="#inicio">Início</a>
+      <a href="#explorar">Explorar</a>
+      <a href="#simulador">Simulador</a>
+      <a href="#vida">Vida</a>
+      <a href="#laboratorio">Laboratório</a>
+      <a href="#evolucao">Evolução</a>
+      <a href="#construtor">Construtor</a>
+      <a href="#escola">Escola</a>
+    </nav>
+  </header>
+
+  <main>
+    <section id="inicio" class="hero section active">
+      <div class="hero-copy">
+        <div class="eyebrow">SEM BACKEND • OFFLINE-FIRST • PWA</div>
+        <h1>Um laboratório de cérebro de mosca dentro do navegador.</h1>
+        <p>Explore circuitos, provoque estímulos, observe respostas, construa redes e teste ideias sem conta, sem Supabase e sem servidor próprio.</p>
+        <div class="hero-actions">
+          <a class="btn primary" href="#simulador">⚡ Começar simulação</a>
+          <a class="btn" href="#explorar">🧠 Explorar rede</a>
+        </div>
+        <div class="notice">A rede incluída nesta versão é <strong>demonstrativa</strong>. Ela foi criada para testar a plataforma e não representa o conectoma científico completo da Drosophila.</div>
+      </div>
+      <div class="hero-visual card glow">
+        <canvas id="heroCanvas" width="720" height="520" aria-label="Visualização animada de uma rede neural"></canvas>
+        <div class="live-pill"><span></span> motor local ativo</div>
+      </div>
+    </section>
+
+    <section id="explorar" class="section panel-section">
+      <div class="section-heading"><div><div class="eyebrow">MODO 01</div><h2>🧠 Explorar</h2><p>Toque em um nó para inspecionar o circuito demonstrativo.</p></div></div>
+      <div class="workspace">
+        <div class="card canvas-card"><canvas id="brainCanvas" width="900" height="600"></canvas></div>
+        <aside class="card inspector"><h3 id="nodeTitle">Selecione um neurônio</h3><p id="nodeDescription">Clique em algum ponto colorido da rede.</p><dl id="nodeMeta" class="meta-list"></dl></aside>
+      </div>
+    </section>
+
+    <section id="simulador" class="section panel-section">
+      <div class="section-heading"><div><div class="eyebrow">MODO 02</div><h2>⚡ Simulador de estímulos</h2><p>Escolha um estímulo e veja a ativação atravessar o circuito.</p></div></div>
+      <div class="stimuli-grid">
+        <button class="stimulus card" data-stimulus="light">☀️<strong>Luz</strong><span>Entrada visual</span></button>
+        <button class="stimulus card" data-stimulus="food">🍌<strong>Cheiro de comida</strong><span>Entrada olfativa</span></button>
+        <button class="stimulus card" data-stimulus="touch">👉<strong>Toque</strong><span>Entrada mecânica</span></button>
+        <button class="stimulus card" data-stimulus="danger">⚠️<strong>Perigo</strong><span>Resposta de fuga</span></button>
+      </div>
+      <div class="card simulator-card"><canvas id="simCanvas" width="1000" height="520"></canvas><div id="simStatus" class="status">Escolha um estímulo.</div></div>
+    </section>
+
+    <section id="vida" class="section panel-section">
+      <div class="section-heading"><div><div class="eyebrow">MODO 03</div><h2>🪰 Vida</h2><p>Uma mosca virtual procura comida e evita ameaças usando um controlador local simples.</p></div><button id="resetWorld" class="btn">Reiniciar mundo</button></div>
+      <div class="card world-card"><canvas id="worldCanvas" width="1000" height="600"></canvas><div class="hud"><span id="foodCount">Comidas: 0</span><span id="ageCount">Tempo: 0s</span><span id="energyCount">Energia: 100</span></div></div>
+    </section>
+
+    <section id="laboratorio" class="section panel-section">
+      <div class="section-heading"><div><div class="eyebrow">MODO 04</div><h2>🧪 Laboratório</h2><p>Desative grupos funcionais e compare a resposta da mosca.</p></div></div>
+      <div class="lab-layout"><div class="card lab-controls"><label><input type="checkbox" data-lab="visual" checked /> Circuito visual</label><label><input type="checkbox" data-lab="olfactory" checked /> Circuito olfativo</label><label><input type="checkbox" data-lab="motor" checked /> Circuito motor</label><label><input type="checkbox" data-lab="escape" checked /> Circuito de fuga</label><button id="labTest" class="btn primary">Executar teste</button></div><div class="card result-card"><h3>Resultado</h3><p id="labResult">Todos os circuitos estão ativos. Execute um teste.</p></div></div>
+    </section>
+
+    <section id="evolucao" class="section panel-section">
+      <div class="section-heading"><div><div class="eyebrow">MODO 05</div><h2>🧬 Evolução</h2><p>Gere populações virtuais e acompanhe a mudança de características ao longo das gerações.</p></div><button id="nextGeneration" class="btn primary">Nova geração</button></div>
+      <div class="evo-stats"><div class="card stat"><span>Geração</span><strong id="generation">1</strong></div><div class="card stat"><span>Velocidade média</span><strong id="avgSpeed">1.00</strong></div><div class="card stat"><span>Sensibilidade</span><strong id="avgSense">1.00</strong></div><div class="card stat"><span>Sobrevivência</span><strong id="survival">50%</strong></div></div>
+      <div class="card"><canvas id="evoCanvas" width="1000" height="420"></canvas></div>
+    </section>
+
+    <section id="construtor" class="section panel-section">
+      <div class="section-heading"><div><div class="eyebrow">MODO 06</div><h2>🧱 Construtor</h2><p>Monte uma cadeia simples de sensor → processamento → ação.</p></div></div>
+      <div class="builder"><div class="card palette"><button class="chip" data-builder="sensor">+ Sensor</button><button class="chip" data-builder="neuron">+ Neurônio</button><button class="chip" data-builder="motor">+ Motor</button><button id="clearBuilder" class="chip danger">Limpar</button></div><div id="builderBoard" class="card builder-board"><p class="muted">Adicione componentes. Eles serão conectados na ordem em que forem criados.</p></div></div>
+    </section>
+
+    <section id="escola" class="section panel-section">
+      <div class="section-heading"><div><div class="eyebrow">MODO 07</div><h2>🎓 Escola</h2><p>Aprenda conceitos básicos e teste seus conhecimentos.</p></div></div>
+      <div class="lessons"><article class="card"><h3>O que é um conectoma?</h3><p>É um mapa de conexões entre neurônios. Ele ajuda pesquisadores a estudar como diferentes partes de um sistema nervoso se relacionam.</p></article><article class="card"><h3>Entrada → processamento → ação</h3><p>Um estímulo pode ativar sensores, atravessar circuitos de processamento e chegar a neurônios que controlam uma ação.</p></article><article class="card quiz"><h3>Quiz rápido</h3><p>Qual parte recebe primeiro um estímulo de luz nesta demonstração?</p><div class="quiz-options"><button data-answer="wrong">Motor</button><button data-answer="correct">Sensor visual</button><button data-answer="wrong">Memória</button></div><p id="quizFeedback"></p></article></div>
+    </section>
+  </main>
+
+  <footer><span>🪰 Mosca Cerebral Países</span><span>Experimentos locais • sem conta • sem backend</span></footer>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
