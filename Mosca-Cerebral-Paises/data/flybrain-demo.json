@@ -1,0 +1,29 @@
+{
+  "meta": {
+    "name": "FlyBrain Demo Network",
+    "version": 1,
+    "scientific": false,
+    "notice": "Rede sintética criada apenas para demonstração da interface e do motor local."
+  },
+  "nodes": [
+    {"id":"vision","label":"Sensor visual","group":"visual","x":0.12,"y":0.28,"description":"Recebe um estímulo luminoso demonstrativo."},
+    {"id":"smell","label":"Sensor olfativo","group":"olfactory","x":0.12,"y":0.68,"description":"Recebe um estímulo de odor demonstrativo."},
+    {"id":"touch","label":"Sensor mecânico","group":"sensory","x":0.30,"y":0.84,"description":"Representa uma entrada tátil simplificada."},
+    {"id":"integrator","label":"Integração","group":"processing","x":0.48,"y":0.50,"description":"Combina sinais sensoriais nesta demonstração."},
+    {"id":"escape","label":"Fuga","group":"escape","x":0.66,"y":0.28,"description":"Circuito demonstrativo associado a uma resposta de fuga."},
+    {"id":"forage","label":"Busca de alimento","group":"processing","x":0.66,"y":0.68,"description":"Circuito demonstrativo associado à aproximação de alimento."},
+    {"id":"motorL","label":"Motor esquerdo","group":"motor","x":0.88,"y":0.38,"description":"Saída motora simplificada."},
+    {"id":"motorR","label":"Motor direito","group":"motor","x":0.88,"y":0.62,"description":"Saída motora simplificada."}
+  ],
+  "edges": [
+    ["vision","integrator",0.8],
+    ["smell","integrator",0.9],
+    ["touch","escape",1.0],
+    ["integrator","escape",0.55],
+    ["integrator","forage",0.75],
+    ["escape","motorL",1.0],
+    ["escape","motorR",0.7],
+    ["forage","motorL",0.65],
+    ["forage","motorR",0.95]
+  ]
+}
