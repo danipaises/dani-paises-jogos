@@ -1,7 +1,7 @@
 {
   "name": "Mosca Cerebral Países",
   "short_name": "Mosca Cerebral",
-  "description": "Laboratório web inspirado no cérebro da Drosophila, sem backend.",
+  "description": "Explore o conectoma real MaleCNS v1.0 e experimentos didáticos de neurociência no navegador, sem backend.",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#0b0d14",
