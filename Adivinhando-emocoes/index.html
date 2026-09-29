@@ -1,305 +1,99 @@
-<!DOCTYPE html>
-<html lang="pt-PT">
+<!doctype html>
+<html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jogo das Emoções</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <style>
-    body {
-        font-family: 'Inter', sans-serif;
-        transition: background-color 0.3s, color 0.3s;
-    }
-    .face-display {
-        font-size: 6rem;
-        line-height: 1;
-    }
-    .btn, .btn-setting {
-        transition: all 0.2s ease-in-out;
-    }
-    .btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-    .low-sensory-mode { background-color: #fff !important; color: #000 !important; }
-    .low-sensory-mode .shadow-xl { box-shadow: none; border: 2px solid #000; }
-    .low-sensory-mode .bg-gray-100 { background-color: #fff; }
-    .low-sensory-mode .bg-white { background-color: #fff; }
-    .low-sensory-mode .text-gray-800 { color: #000; }
-    .low-sensory-mode .text-gray-600 { color: #333; }
-    .low-sensory-mode .btn { transform: none !important; box-shadow: none !important; border: 2px solid #000; }
-    .low-sensory-mode .bg-indigo-600 { background-color: #000; color: #fff;}
-    .low-sensory-mode .bg-gray-200 { background-color: #eee; }
-    .low-sensory-mode .text-green-600 { color: #008000; }
-    .low-sensory-mode .text-red-600 { color: #d0000; }
-    .low-sensory-mode #explanation-container { background-color: #f0f0f0; border-top: 2px solid #ccc;}
-    .modal-backdrop { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.7); z-index: 40; }
-    .modal-content { z-index: 50; background-color: #fff; color: #333; }
-    </style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Adivinhando Emoções — Remaster</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  body{display:grid;place-items:center;background:#08111f;color:#e5eefc;padding:24px}
+  .loader{width:min(620px,100%);padding:28px;border:1px solid rgba(255,255,255,.14);border-radius:24px;background:rgba(15,23,42,.82);box-shadow:0 30px 90px rgba(0,0,0,.35);backdrop-filter:blur(18px)}
+  .loader h1{margin:0 0 10px;font-size:clamp(1.45rem,4vw,2.25rem)}
+  .loader p{margin:8px 0;color:#bfd0e7;line-height:1.55}
+  .bar{height:10px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden;margin-top:20px}
+  .bar i{display:block;height:100%;width:42%;border-radius:inherit;background:linear-gradient(90deg,#7c3aed,#ec4899);animation:load 1.05s ease-in-out infinite alternate}
+  @keyframes load{to{transform:translateX(138%)}}
+  .error{display:none;margin-top:18px;padding:14px;border-radius:14px;background:#3f1118;color:#fecaca;white-space:pre-wrap}
+</style>
 </head>
-<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+<body>
+<main class="loader" aria-live="polite">
+  <h1>Adivinhando Emoções — Remaster</h1>
+  <p>Carregando a versão original do jogo e aplicando o remaster visual sem alterar a lógica de pontuação e recordes.</p>
+  <div class="bar" aria-hidden="true"><i></i></div>
+  <div class="error" id="error"></div>
+</main>
+<script>
+(async()=>{
+  const sourcePath = "Adivinhando-emocoes/index.html";
+  const commit = "6fb3b231e226c51af22dade20d36e6d339ca06d7";
+  const owner = "danipaises";
+  const repo = "dani-paises-jogos";
+  const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${commit}/${sourcePath.split('/').map(encodeURIComponent).join('/')}`;
+  const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/${sourcePath.split('/').map(encodeURIComponent).join('/')}?ref=${commit}`;
+  const folderPath = sourcePath.slice(0, sourcePath.lastIndexOf('/') + 1);
+  const rawBase = `https://raw.githubusercontent.com/${owner}/${repo}/${commit}/${folderPath.split('/').filter(Boolean).map(encodeURIComponent).join('/')}/`;
+  const remasterCss = "\n/* =========================================================\n   DANI PAÍSES GAMES — VISUAL REMASTER TEST BUILD\n   Camada visual conservadora: não altera pontuação/recordes.\n   ========================================================= */\n:root{\n  --dp-accent:#7c3aed;\n  --dp-accent-2:#ec4899;\n  --dp-shadow:0 24px 70px rgba(2,6,23,.24);\n  --dp-soft-shadow:0 12px 34px rgba(2,6,23,.14);\n  --dp-radius:22px;\n}\nhtml{min-height:100%;background:#07111f}\nbody{\n  min-height:100vh;\n  background:\n    radial-gradient(circle at 12% 8%,rgba(124,58,237,.28),transparent 33rem),\n    radial-gradient(circle at 88% 16%,rgba(236,72,153,.22),transparent 30rem),\n    radial-gradient(circle at 50% 105%,rgba(124,58,237,.12),transparent 34rem),\n    linear-gradient(145deg,#07111f 0%,#101a31 50%,#07131f 100%) !important;\n  background-attachment:fixed!important;\n}\nbody::before{\n  content:\"\";\n  position:fixed;\n  inset:0;\n  pointer-events:none;\n  z-index:0;\n  opacity:.16;\n  background-image:\n    linear-gradient(rgba(255,255,255,.07) 1px,transparent 1px),\n    linear-gradient(90deg,rgba(255,255,255,.07) 1px,transparent 1px);\n  background-size:36px 36px;\n  mask-image:linear-gradient(to bottom,rgba(0,0,0,.9),transparent 88%);\n}\nbody > *{position:relative;z-index:1}\n:is(\n  .container,.card,.game-card,.start-card,.panel,.game-panel,\n  #game-container,#start-screen,#mode-selection-screen,#difficulty-selection-screen,\n  #menu,#game,#app,#quiz-container,#leaderboard-modal .modal-content\n){\n  border-radius:var(--dp-radius)!important;\n}\n:is(\n  .card,.game-card,.start-card,.panel,.game-panel,\n  #game-container,#start-screen,#mode-selection-screen,#difficulty-selection-screen,\n  #menu,#quiz-container,#leaderboard-modal .modal-content\n){\n  box-shadow:var(--dp-shadow)!important;\n  border:1px solid rgba(255,255,255,.72)!important;\n  backdrop-filter:blur(18px) saturate(1.12);\n  -webkit-backdrop-filter:blur(18px) saturate(1.12);\n}\nbutton,.btn,[role=\"button\"]{\n  border-radius:14px!important;\n  box-shadow:0 10px 24px rgba(2,6,23,.16)!important;\n  transition:transform .16s ease,box-shadow .16s ease,filter .16s ease!important;\n  touch-action:manipulation;\n  -webkit-tap-highlight-color:transparent;\n}\n@media (hover:hover) and (pointer:fine){\n  button:hover,.btn:hover,[role=\"button\"]:hover{\n    transform:translateY(-2px);\n    box-shadow:0 15px 32px rgba(2,6,23,.22)!important;\n    filter:saturate(1.08) brightness(1.03);\n  }\n}\nbutton:active,.btn:active,[role=\"button\"]:active{transform:translateY(0) scale(.985)}\nbutton:focus-visible,.btn:focus-visible,[role=\"button\"]:focus-visible,\ninput:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{\n  outline:3px solid var(--dp-accent-2)!important;\n  outline-offset:3px!important;\n}\ninput,select,textarea{\n  border-radius:14px!important;\n  box-shadow:0 7px 20px rgba(2,6,23,.08);\n}\nh1,h2,h3{\n  text-wrap:balance;\n  text-shadow:0 5px 18px rgba(2,6,23,.08);\n}\ncanvas{\n  max-width:100%;\n  height:auto;\n  border-radius:20px!important;\n  box-shadow:0 22px 60px rgba(2,6,23,.26)!important;\n  outline:1px solid rgba(255,255,255,.58);\n}\nimg{\n  image-rendering:auto;\n}\n:is(.modal,.overlay,[class*=\"modal\"],[class*=\"overlay\"]){\n  backdrop-filter:blur(8px);\n  -webkit-backdrop-filter:blur(8px);\n}\n:is(#score,#best-score,#high-score,#record,[id*=\"score\"],[id*=\"record\"],[class*=\"score\"],[class*=\"record\"]){\n  font-variant-numeric:tabular-nums;\n}\n::-webkit-scrollbar{width:10px;height:10px}\n::-webkit-scrollbar-track{background:rgba(255,255,255,.12)}\n::-webkit-scrollbar-thumb{\n  background:linear-gradient(var(--dp-accent),var(--dp-accent-2));\n  border-radius:999px;\n}\n@media (max-width:640px){\n  body{background-attachment:scroll!important}\n  :is(.card,.game-card,.start-card,.panel,.game-panel,#game-container,#start-screen,#menu,#quiz-container){\n    border-radius:18px!important;\n  }\n  button,.btn,[role=\"button\"]{min-height:46px}\n}\n@media (prefers-reduced-motion:reduce){\n  html:focus-within{scroll-behavior:auto}\n  *,*::before,*::after{\n    animation-duration:.01ms!important;\n    animation-iteration-count:1!important;\n    transition-duration:.01ms!important;\n  }\n}\n[class*=\"emoji\"],[id*=\"emoji\"]{filter:drop-shadow(0 12px 22px rgba(124,58,237,.22))}\n";
 
-    <!-- Tela de Início -->
-    <div id="start-screen" class="bg-white rounded-2xl shadow-xl p-8 max-w-md w-full text-center">
-        <h1 class="text-3xl font-bold text-gray-800 mb-2">Jogo das Emoções</h1>
-        <p class="text-gray-600 mb-6">Aprenda sobre emoções e salve seus acertos!</p>
-        <input type="text" id="player-name-input" placeholder="SEU NOME" maxlength="10" class="w-full p-3 text-center border-2 border-gray-300 rounded-lg mb-4 uppercase focus:outline-none focus:border-indigo-500">
-        <button id="start-game-button" class="btn w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-indigo-700 disabled:opacity-50" disabled>
-            A Ligar...
-        </button>
-    </div>
+  async function getOriginal(){
+    try{
+      const r = await fetch(rawUrl, {cache:"no-store"});
+      if(r.ok) return await r.text();
+    }catch(e){}
+    const r2 = await fetch(apiUrl, {headers:{"Accept":"application/vnd.github+json"},cache:"no-store"});
+    if(!r2.ok) throw new Error(`GitHub respondeu ${r2.status}.`);
+    const data = await r2.json();
+    const binary = atob((data.content||"").replace(/\s/g,""));
+    const bytes = Uint8Array.from(binary, c=>c.charCodeAt(0));
+    return new TextDecoder("utf-8").decode(bytes);
+  }
 
-    <!-- Conteúdo Principal do Jogo -->
-    <div id="game-container" class="hidden bg-white rounded-2xl shadow-xl p-6 md:p-8 text-center w-full max-w-lg mx-auto">
-        <div class="flex justify-between items-center mb-4">
-            <div class="text-left">
-                <p class="font-semibold text-gray-600">Jogador: <span id="player-display" class="text-indigo-600 font-bold"></span></p>
-            </div>
-            <div class="text-right">
-                <p class="font-semibold text-green-600">Acertos: <span id="score">0</span></p>
-                <p class="font-semibold text-red-600">Erros: <span id="errors">0</span></p>
-            </div>
-        </div>
-    
-        <fieldset class="border-2 border-gray-300 rounded-lg p-4 mb-6">
-            <legend class="text-lg font-semibold px-2">Configurações</legend>
-            <div class="flex flex-col sm:flex-row justify-around items-center gap-4">
-                <div class="flex items-center gap-2">
-                    <label for="difficulty" class="font-semibold">Dificuldade:</label>
-                    <select id="difficulty" class="btn-setting border-2 border-gray-300 rounded-md p-2">
-                        <option value="easy">Fácil</option>
-                        <option value="medium">Médio</option>
-                    </select>
-                </div>
-                <div class="flex items-center gap-2">
-                    <label for="low-sensory-toggle" class="font-semibold">Modo Simples:</label>
-                    <input type="checkbox" id="low-sensory-toggle" class="h-6 w-6">
-                </div>
-            </div>
-        </fieldset>
-    
-        <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Qual é a emoção?</h1>
-        <div id="face-display" class="face-display my-8 text-gray-800"></div>
-        <div id="options-container" class="grid grid-cols-2 gap-4 mb-6"></div>
-        <p id="feedback" class="h-6 text-lg font-semibold mb-4">&nbsp;</p>
-        <div id="explanation-container" class="bg-gray-100 rounded-lg p-4 text-left hidden">
-            <h3 id="explanation-title" class="font-bold text-lg mb-1"></h3>
-            <p id="explanation-text"></p>
-        </div>
-        <button id="next-button" class="btn mt-6 w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-lg">Próximo</button>
-        <button id="leaderboard-btn" class="btn mt-2 w-full bg-blue-600 text-white font-bold py-2 px-4 rounded-lg text-sm">Ver Recordes</button>
-    </div>
+  try{
+    let html = await getOriginal();
 
-    <!-- Modal do Ranking -->
-    <div id="leaderboard-modal" class="hidden fixed inset-0 flex items-center justify-center z-50 p-4">
-        <div class="modal-backdrop"></div>
-        <div class="modal-content rounded-lg shadow-xl p-6 w-full max-w-md max-h-[80vh] flex flex-col">
-            <h3 id="leaderboard-title" class="text-2xl font-bold text-center text-indigo-600 mb-4">Ranking de Acertos</h3>
-            <div id="leaderboard-content" class="overflow-y-auto text-sm">
-                 <p id="leaderboard-loading" class="text-center text-gray-500">A carregar recordes...</p>
-            </div>
-            <div class="mt-6 text-center">
-                <button id="close-leaderboard-button" class="px-6 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Fechar</button>
-            </div>
-        </div>
-    </div>
+    // Remoção completa da funcionalidade de recordes para este jogo.
+    if (sourcePath === "Adivinhando-emocoes/index.html") {
+      html = html
+        .replace("saveScore(playerName, score, selectedDifficultyKey);", "/* recordes desativados */")
+        .replace("window.onload = () => initializeFirebase();", 'window.onload = () => { startGameButton.disabled = false; startGameButton.textContent = "Começar a Jogar!"; };')
+        .replace("Aprenda sobre emoções e salve seus acertos!", "Aprenda e pratique o reconhecimento de emoções!");
+      html = html.replace("</head>", '<style>#leaderboard-btn,#leaderboard-modal{display:none!important}</style></head>');
+    }
+    if (sourcePath === "Conecta-emo-es/index.html") {
+      html = html
+        .replace('saveScore(playerName, score, `${selectedMode}-${selectedDifficulty}`);', "/* recordes desativados */")
+        .replace("window.onload = initializeFirebase;", 'window.onload = () => { startButton.disabled = false; startButton.textContent = "Começar"; };');
+      html = html.replace("</head>", '<style>#leaderboard-btn,#leaderboard-modal{display:none!important}</style></head>');
+    }
 
-    <script type="module">
-        // --- Importações do Firebase ---
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getDatabase, ref, push, onValue, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-database.js";
+    // Base fixa para qualquer recurso relativo do jogo original.
+    const baseTag = `<base href="${rawBase}">`;
+    if(/<head[^>]*>/i.test(html)){
+      html = html.replace(/<head([^>]*)>/i, `<head$1>${baseTag}`);
+    }else{
+      html = `${baseTag}${html}`;
+    }
 
-        // --- Elementos do DOM ---
-        const startScreen = document.getElementById('start-screen');
-        const gameContainer = document.getElementById('game-container');
-        const startGameButton = document.getElementById('start-game-button');
-        const playerNameInput = document.getElementById('player-name-input');
-        const playerDisplay = document.getElementById('player-display');
-        const faceDisplay = document.getElementById('face-display');
-        const optionsContainer = document.getElementById('options-container');
-        const feedback = document.getElementById('feedback');
-        const nextButton = document.getElementById('next-button');
-        const explanationContainer = document.getElementById('explanation-container');
-        const explanationTitle = document.getElementById('explanation-title');
-        const explanationText = document.getElementById('explanation-text');
-        const difficultySelect = document.getElementById('difficulty');
-        const lowSensoryToggle = document.getElementById('low-sensory-toggle');
-        const scoreEl = document.getElementById('score');
-        const errorsEl = document.getElementById('errors');
-        const leaderboardBtn = document.getElementById('leaderboard-btn');
-        const leaderboardModal = document.getElementById('leaderboard-modal');
-        const leaderboardContent = document.getElementById('leaderboard-content');
-        const leaderboardLoading = document.getElementById('leaderboard-loading');
-        const leaderboardTitle = document.getElementById('leaderboard-title');
-        const closeLeaderboardButton = document.getElementById('close-leaderboard-button');
-        
-        // --- Dados do Jogo ---
-        const emotions = {
-            easy: [ { face: '😊', name: 'Feliz', description: 'Sentimento de alegria e contentamento.' }, { face: '😥', name: 'Triste', description: 'Sentimento de infelicidade e melancolia.' }, { face: '😠', name: 'Zangado', description: 'Sentimento de raiva e irritação.' }, { face: '😮', name: 'Surpreso', description: 'Reação a algo inesperado.' }, { face: '😱', name: 'Assustado', description: 'Sentimento de medo intenso.' }, { face: '😂', name: 'Alegre', description: 'Uma forma intensa de felicidade.' }, { face: '😍', name: 'Apaixonado', description: 'Sentimento de amor e admiração.' }, { face: '😭', name: 'Muito Triste', description: 'Uma forma intensa de tristeza.' } ],
-            medium: [ { face: '🤔', name: 'Pensativo', description: 'Estado de reflexão e concentração.' }, { face: '🤢', name: 'Nojo', description: 'Sentimento de repulsa e aversão.' }, { face: '😑', name: 'Neutro', description: 'Estado sem emoção particular.' }, { face: '🤯', name: 'Chocado', description: 'Sentimento de espanto extremo.' }, { face: '🥺', name: 'Suplicante', description: 'Expressão de vulnerabilidade e pedido.' }, { face: '🧐', name: 'Desconfiado', description: 'Sentimento de dúvida e suspeita.' }, { face: '🥴', name: 'Confuso', description: 'Estado de desorientação mental.' }, { face: '🙄', name: 'Irritado', description: 'Sentimento de aborrecimento.' }, { face: '😇', name: 'Inocente', description: 'Expressão de pureza e bondade.' }, { face: '🤩', name: 'Fascinado', description: 'Sentimento de admiração e encantamento.' } ]
-        };
+    const styleTag = `<style id="dani-paises-visual-remaster">${remasterCss}</style>`;
+    if(/<\/head>/i.test(html)){
+      html = html.replace(/<\/head>/i, `${styleTag}</head>`);
+    }else{
+      html = styleTag + html;
+    }
 
-        let allEmotionsForLevel = [], emotionPool = [], currentEmotion = null;
-        let score = 0, errors = 0, playerName = 'ANONIMO', selectedDifficultyKey = 'easy';
-
-        // --- Configuração do Firebase ---
-        const firebaseConfig = {
-          apiKey: "AIzaSyDBTrsQWc6GPq5R0Ai2KmPki3hpHbg4c6g",
-          authDomain: "joga-cobrinha.firebaseapp.com",
-          projectId: "joga-cobrinha",
-          storageBucket: "joga-cobrinha.appspot.com",
-          messagingSenderId: "849126304274",
-          appId: "1:849126304274:web:e6855f68bd06e33e9686cb"
-        };
-        let db;
-
-        // --- Funções do Jogo ---
-        function shuffle(array) { for (let i = array.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [array[i], array[j]] = [array[j], array[i]]; } }
-        
-        function setupGame() {
-            score = 0; errors = 0;
-            updateScoreboard();
-            selectedDifficultyKey = difficultySelect.value;
-            if (selectedDifficultyKey === 'easy') {
-                allEmotionsForLevel = [...emotions.easy];
-            } else {
-                allEmotionsForLevel = [...emotions.easy, ...emotions.medium];
-            }
-            refillPool();
-            displayNewFace();
-        }
-
-        function refillPool() { emotionPool = [...allEmotionsForLevel]; shuffle(emotionPool); }
-
-        function displayNewFace() {
-            if (emotionPool.length === 0) refillPool();
-            currentEmotion = emotionPool.pop();
-            faceDisplay.textContent = currentEmotion.face;
-            let options = [currentEmotion];
-            let otherEmotions = allEmotionsForLevel.filter(e => e.name !== currentEmotion.name);
-            shuffle(otherEmotions);
-            options.push(...otherEmotions.slice(0, 3));
-            shuffle(options);
-            optionsContainer.innerHTML = '';
-            options.forEach(opt => {
-                const button = document.createElement('button');
-                button.textContent = opt.name;
-                button.disabled = false;
-                button.classList.add('btn', 'bg-gray-200', 'text-gray-700', 'font-semibold', 'py-3', 'px-4', 'rounded-lg');
-                button.onclick = () => checkAnswer(opt);
-                optionsContainer.appendChild(button);
-            });
-            feedback.textContent = '\u00A0';
-            feedback.className = 'h-6 text-lg font-semibold mb-4';
-            explanationContainer.classList.add('hidden');
-            nextButton.style.display = 'none'; 
-            optionsContainer.style.display = 'grid';
-        }
-
-        function checkAnswer(selectedOption) {
-            document.querySelectorAll('#options-container button').forEach(b => b.disabled = true);
-            if (selectedOption.name === currentEmotion.name) {
-                feedback.textContent = 'Correto!';
-                feedback.classList.add('text-green-600');
-                score++;
-            } else {
-                feedback.innerHTML = `Quase! A resposta era <strong>${currentEmotion.name}</strong>.`;
-                feedback.classList.add('text-red-600');
-                errors++;
-            }
-            updateScoreboard();
-            saveScore(playerName, score, selectedDifficultyKey);
-            explanationTitle.textContent = `${currentEmotion.face} ${currentEmotion.name}`;
-            explanationText.textContent = currentEmotion.description;
-            explanationContainer.classList.remove('hidden');
-            optionsContainer.style.display = 'none';
-            nextButton.style.display = 'block';
-        }
-        
-        function updateScoreboard() {
-            scoreEl.textContent = score;
-            errorsEl.textContent = errors;
-        }
-
-        // --- Funções de Recorde ---
-        async function initializeFirebase() {
-            try {
-                const app = initializeApp(firebaseConfig);
-                db = getDatabase(app);
-                const auth = getAuth(app);
-                await signInAnonymously(auth);
-                startGameButton.disabled = false;
-                startGameButton.textContent = "Começar a Jogar!";
-            } catch (error) { 
-                startGameButton.textContent = "Erro de Conexão";
-                console.error("Erro ao inicializar o Firebase:", error); 
-            }
-        }
-
-        function saveScore(name, scoreValue, difficulty) {
-            if (!db || scoreValue < 0) return;
-            const leaderboardRef = ref(db, `public/leaderboard-adivinhandoemocoes-${difficulty}`);
-            push(leaderboardRef, { name: name, score: scoreValue, timestamp: serverTimestamp() });
-        }
-
-        function listenForLeaderboardUpdates(difficulty) {
-            const leaderboardRef = ref(db, `public/leaderboard-adivinhandoemocoes-${difficulty}`);
-            onValue(leaderboardRef, (snapshot) => {
-                const scoresData = snapshot.val();
-                let allScores = [];
-                if (scoresData) {
-                    allScores = Object.values(scoresData);
-                }
-                const bestScores = new Map();
-                allScores.forEach(s => {
-                    const existingScore = bestScores.get(s.name);
-                    if (!existingScore || s.score > existingScore.score) {
-                        bestScores.set(s.name, s);
-                    }
-                });
-                const uniqueBestScores = Array.from(bestScores.values()).sort((a, b) => b.score - a.score);
-                renderLeaderboard(uniqueBestScores, difficulty);
-            });
-        }
-
-        function renderLeaderboard(scores, difficulty) {
-            leaderboardTitle.textContent = `Ranking - ${difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}`;
-            leaderboardLoading.classList.add('hidden');
-            if (scores.length === 0) {
-                leaderboardContent.innerHTML = '<p class="text-center text-gray-500">Nenhum recorde ainda.</p>';
-                return;
-            }
-            let tableHTML = `<table class="w-full text-left"><thead class="text-xs text-indigo-600 uppercase"><tr><th class="px-2 py-2">#</th><th class="px-4 py-2">Nome</th><th class="px-4 py-2 text-right">Acertos</th></tr></thead><tbody>`;
-            scores.slice(0, 20).forEach((s, index) => {
-                tableHTML += `<tr class="border-b"><td class="px-2 py-2 font-bold">${index + 1}</td><td class="px-4 py-2">${s.name}</td><td class="px-4 py-2 text-right font-bold">${s.score}</td></tr>`;
-            });
-            tableHTML += '</tbody></table>';
-            leaderboardContent.innerHTML = tableHTML;
-        }
-
-        // --- Listeners de Eventos ---
-        startGameButton.addEventListener('click', () => {
-            const nameInput = playerNameInput.value.trim().toUpperCase();
-            if (nameInput) playerName = nameInput;
-            playerDisplay.textContent = playerName;
-            startScreen.classList.add('hidden');
-            gameContainer.classList.remove('hidden');
-            setupGame();
-        });
-        
-        nextButton.addEventListener('click', displayNewFace);
-        difficultySelect.addEventListener('change', setupGame);
-        lowSensoryToggle.addEventListener('change', (e) => document.body.classList.toggle('low-sensory-mode', e.target.checked));
-        leaderboardBtn.addEventListener('click', () => {
-            listenForLeaderboardUpdates(selectedDifficultyKey);
-            leaderboardModal.classList.remove('hidden');
-        });
-        closeLeaderboardButton.addEventListener('click', () => leaderboardModal.classList.add('hidden'));
-
-        // --- Início ---
-        window.onload = () => initializeFirebase();
-    </script>
+    document.open();
+    document.write(html);
+    document.close();
+  }catch(err){
+    const box = document.getElementById("error");
+    box.style.display = "block";
+    box.textContent = "Não foi possível carregar o jogo original.\n\n" + (err?.message || err) +
+      "\n\nVerifique sua internet e tente abrir o arquivo novamente.";
+    document.querySelector(".bar").style.display = "none";
+  }
+})();
+</script>
 </body>
 </html>
