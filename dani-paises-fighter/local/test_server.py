@@ -35,7 +35,7 @@ class Tests(unittest.TestCase):
         with self.assertRaises(urllib.error.HTTPError):self.post('/api/match',{'key':module.ROOM.host_key,'active':[x['id'] for x in p],'config':{'format':'campaign','rule':'stock'}})
         with self.assertRaises(urllib.error.HTTPError):self.post('/api/remove',{'key':module.ROOM.host_key,'id':p[0]['id']})
         self.post('/api/phase',{'key':module.ROOM.host_key,'phase':'lobby'})
-        self.post('/api/remove',{'key':module.ROOM.host_key,'id':p[0]['id']})
+        self.post('/api/remove',{'key':module.ROOM.host_key,'id':p[1]['id']})
     def test_qr_static_and_stream(self):
         for path in ['/host','/join','/local/host.js','/icon.svg']:
             r=urllib.request.urlopen(self.base+path,timeout=3);self.assertEqual(r.status,200);self.assertTrue(r.read())
@@ -45,5 +45,26 @@ class Tests(unittest.TestCase):
         with urllib.request.urlopen(self.base+'/api/events?key='+p['token'],timeout=3) as stream:
             data=json.loads(stream.readline().decode().removeprefix('data: '));self.assertEqual(data['myId'],p['id']);self.assertNotIn('inputs',data)
         with self.assertRaises(urllib.error.HTTPError):urllib.request.urlopen(self.base+'/../server.py',timeout=3)
+
+    def test_player_one_organizes_without_host_key(self):
+        p1=self.post('/api/join',{'room':module.ROOM.invite,'name':'P1'})
+        p2=self.post('/api/join',{'room':module.ROOM.invite,'name':'P2'})
+        self.assertTrue(module.ROOM.snapshot(p1['id'])['canOrganize'])
+        self.assertFalse(module.ROOM.snapshot(p2['id'])['canOrganize'])
+        payload={'selected':[p1['id'],p2['id']],'tournament':'none','config':{'format':'duel','rule':'stock','lives':3,'seconds':60,'stage':0}}
+        with self.assertRaises(urllib.error.HTTPError):self.post('/api/organize',{'key':p2['token'],'action':'begin','payload':payload})
+        command=self.post('/api/organize',{'key':p1['token'],'action':'begin','payload':payload})
+        snapshot=module.ROOM.snapshot('host');self.assertEqual(snapshot['commands'][0]['action'],'begin')
+        self.assertNotIn('commands',module.ROOM.snapshot(p1['id']))
+        self.assertTrue(module.ROOM.snapshot(p1['id'])['commandPending'])
+        with self.assertRaises(urllib.error.HTTPError):self.post('/api/organize',{'key':p1['token'],'action':'pause'})
+        with self.assertRaises(urllib.error.HTTPError):self.post('/api/ack',{'key':p1['token'],'id':command['commandId'],'ok':True})
+        self.post('/api/ack',{'key':module.ROOM.host_key,'id':command['commandId'],'ok':True,'message':'Partida iniciada'})
+        self.assertFalse(module.ROOM.snapshot(p1['id'])['commandPending'])
+        self.assertEqual(module.ROOM.snapshot(p1['id'])['commandStatus']['message'],'Partida iniciada')
+        self.post('/api/phase',{'key':module.ROOM.host_key,'phase':'result','view':{'title':'P1 venceu','nextEnabled':True}})
+        self.assertTrue(module.ROOM.snapshot(p1['id'])['view']['nextEnabled'])
+        self.post('/api/organize',{'key':p1['token'],'action':'next'})
+        self.assertEqual(module.ROOM.snapshot('host')['commands'][0]['action'],'next')
 
 if __name__=='__main__':unittest.main()

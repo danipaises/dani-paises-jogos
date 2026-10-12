@@ -18,7 +18,7 @@ python3 - <<'PY'
 import hashlib, os, pathlib, sys, tempfile, urllib.request, zipfile
 if sys.version_info<(3,10):sys.exit('Este servidor requer Python 3.10 ou mais recente.')
 url='https://raw.githubusercontent.com/danipaises/dani-paises-jogos/main/dani-paises-fighter/local/dani-fighter-local.zip'
-expected='f723d805f1737d0b891c9c3c1ae1cec3853fcb6864f5d76d3d9d328c904d6efe'
+expected='354168382d228c695b45b5ed58d959f66f171424f5f218d67ca72ce048c2167b'
 dest=pathlib.Path(os.environ['DP_INSTALL_DIR'])
 print('Baixando o pacote local…')
 with tempfile.TemporaryDirectory() as temp:
@@ -42,3 +42,4 @@ if [ -n "${PREFIX:-}" ] && command -v termux-wake-lock >/dev/null 2>&1; then
 fi
 cd -- "$dp_install_dir"
 python3 server.py
+

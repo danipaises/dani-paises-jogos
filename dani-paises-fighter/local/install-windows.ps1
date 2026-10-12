@@ -13,7 +13,7 @@ if (-not $python) {
 $installDir = Join-Path $env:LOCALAPPDATA 'DaniPaisesFighter'
 $archive = Join-Path $env:TEMP 'dani-fighter-local.zip'
 Invoke-WebRequest 'https://raw.githubusercontent.com/danipaises/dani-paises-jogos/main/dani-paises-fighter/local/dani-fighter-local.zip' -OutFile $archive
-if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() -ne 'f723d805f1737d0b891c9c3c1ae1cec3853fcb6864f5d76d3d9d328c904d6efe') { throw 'Pacote alterado. Baixe o instalador atual e tente novamente.' }
+if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() -ne '354168382d228c695b45b5ed58d959f66f171424f5f218d67ca72ce048c2167b') { throw 'Pacote alterado. Baixe o instalador atual e tente novamente.' }
 New-Item -ItemType Directory -Path $installDir -Force | Out-Null
 Expand-Archive $archive -DestinationPath $installDir -Force
 $runner = if ($python.Name -eq 'py.exe') { 'py -3' } else { 'python' }
@@ -24,3 +24,4 @@ Write-Host 'Instalado. Use Iniciar-Dani-Paises na area de trabalho.'
 Write-Host 'Na primeira execucao, permita acesso pela rede privada se o Windows perguntar.'
 Set-Location $installDir
 if ($python.Name -eq 'py.exe') { & $python.Source -3 server.py } else { & $python.Source server.py }
+

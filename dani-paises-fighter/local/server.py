@@ -25,6 +25,11 @@ class Room:
         self.revision = 0
         self.config = {}
         self.host_seen = time.monotonic()
+        self.organizer = None
+        self.commands = []
+        self.command_serial = 0
+        self.command_status = None
+        self.view = {}
     def authenticate(self, key):
         if secrets.compare_digest(key, self.host_key): return 'host'
         for p in self.players.values():
@@ -35,14 +40,21 @@ class Room:
         pid = secrets.token_hex(6)
         p = dict(id=pid, token=secrets.token_urlsafe(24), name=str(name or 'Jogador')[:24], character=character if character in CHARACTERS else 'dani', source=source, seen=time.monotonic(), inputAt=0, input={}, seq=-1)
         self.players[pid] = p
+        if source=='phone' and self.organizer is None:self.organizer=pid
         return p
     def snapshot(self, role):
         now=time.monotonic()
         public=[{k:p[k] for k in ('id','name','character','source')} | {'connected':p['source']!='phone' or now-p['seen']<5} for p in self.players.values()]
-        result=dict(players=public, phase=self.phase, active=self.active, config=self.config, revision=self.revision, hostAlive=now-self.host_seen<4)
+        result=dict(players=public, phase=self.phase, active=self.active, config=self.config, revision=self.revision, hostAlive=now-self.host_seen<4, organizerId=self.organizer, view=self.view)
         if role=='host':
             result['inputs']={p['id']:p['input'] if now-p['inputAt']<.4 else {} for p in self.players.values()}
-        else: result['myId']=role
+            result['commands']=self.commands
+        else:
+            result['myId']=role
+            result['canOrganize']=role==self.organizer
+            if role==self.organizer:
+                result['commandStatus']=self.command_status
+                result['commandPending']=bool(self.commands)
         return result
 
 ROOM = Room()
@@ -101,6 +113,7 @@ class Handler(BaseHTTPRequestHandler):
             length=int(self.headers.get('Content-Length',0))
             if length>16384:raise ValueError('Pedido muito grande.')
             d=json.loads(self.rfile.read(length));u=urlparse(self.path)
+            if not isinstance(d,dict):raise ValueError('Pedido inválido.')
             with ROOM.lock:
                 role=ROOM.authenticate(str(d.get('key','')))
                 if u.path=='/api/join':
@@ -118,7 +131,28 @@ class Handler(BaseHTTPRequestHandler):
                     elif role in ROOM.players:ROOM.players[role]['seen']=time.monotonic()
                     else:return self.send(403,{'error':'Sessão inválida.'})
                     return self.send(200,{'ok':True})
+                if u.path=='/api/organize':
+                    if role!=ROOM.organizer or role not in ROOM.players:return self.send(403,{'error':'Somente o jogador 1 organiza as partidas.'})
+                    action=d.get('action')
+                    if action not in {'begin','next','pause','lobby','addLocal','remove'}:raise ValueError('Ação inválida.')
+                    if ROOM.commands:raise ValueError('A tela da TV ainda está processando a ação anterior.')
+                    payload=d.get('payload',{})
+                    if not isinstance(payload,dict):raise ValueError('Configuração inválida.')
+                    if action=='begin':
+                        ids=payload.get('selected',[]);config=payload.get('config',{})
+                        if not isinstance(ids,list) or len(ids)>32 or len(set(ids))!=len(ids) or any(x not in ROOM.players for x in ids):raise ValueError('Participantes inválidos.')
+                        if not isinstance(config,dict) or config.get('format') not in {'duel','ffa','teams','campaign'} or config.get('rule') not in {'rounds','stock','time'}:raise ValueError('Formato ou regra inválidos.')
+                        if payload.get('tournament','none') not in {'none','league','knockout'}:raise ValueError('Torneio inválido.')
+                        if ROOM.phase in ('fight','paused'):raise ValueError('Volte ao lobby antes de iniciar outra partida.')
+                    ROOM.command_serial+=1
+                    ROOM.commands.append({'id':ROOM.command_serial,'action':action,'payload':payload})
+                    ROOM.command_status={'id':ROOM.command_serial,'message':'Aguardando a tela da TV…','ok':None}
+                    return self.send(200,{'ok':True,'commandId':ROOM.command_serial})
                 if role!='host':return self.send(403,{'error':'Somente a tela principal organiza a sala.'})
+                if u.path=='/api/ack':
+                    command_id=d.get('id');ROOM.commands=[c for c in ROOM.commands if c['id']!=command_id]
+                    ROOM.command_status={'id':command_id,'ok':bool(d.get('ok')),'message':str(d.get('message',''))[:200]}
+                    return self.send(200,{'ok':True})
                 if u.path=='/api/local':
                     source=d.get('source','keyboard1')
                     if source not in {'keyboard1','keyboard2','touch','pad0','pad1','pad2','pad3'}:raise ValueError('Controle local inválido.')
@@ -128,6 +162,7 @@ class Handler(BaseHTTPRequestHandler):
                 if u.path=='/api/remove':
                     pid=d.get('id')
                     if ROOM.phase in ('fight','paused') and pid in ROOM.active:raise ValueError('Encerre a partida antes de remover esse jogador.')
+                    if pid==ROOM.organizer:raise ValueError('O jogador 1 organiza a sala e não pode ser removido.')
                     ROOM.players.pop(pid,None);ROOM.revision+=1;return self.send(200,{'ok':True})
                 if u.path=='/api/match':
                     active=d.get('active',[]);config=d.get('config',{})
@@ -136,11 +171,14 @@ class Handler(BaseHTTPRequestHandler):
                     if len(active)!=(4 if config['format'] in ('ffa','teams') else 2):raise ValueError('Quantidade de jogadores incompatível com o formato.')
                     if config.get('rule') not in {'rounds','stock','time'}:raise ValueError('Regra inválida.')
                     if int(config.get('lives',3)) not in (3,5) or int(config.get('seconds',60)) not in (60,120,180):raise ValueError('Vidas ou tempo inválidos.')
-                    ROOM.active=active;ROOM.config=config;ROOM.phase='fight';ROOM.revision+=1
+                    ROOM.active=active;ROOM.config=config;ROOM.phase='fight';ROOM.view={};ROOM.revision+=1
                 elif u.path=='/api/phase':
                     phase=d.get('phase')
                     if phase not in ('lobby','fight','paused','result'):raise ValueError('Estado inválido.')
-                    ROOM.phase=phase;ROOM.revision+=1
+                    ROOM.phase=phase
+                    if isinstance(d.get('view'),dict):ROOM.view=d['view']
+                    elif phase!='result':ROOM.view={}
+                    ROOM.revision+=1
                 else:return self.send(404,{'error':'Ação desconhecida.'})
                 return self.send(200,{'ok':True})
         except (ValueError,TypeError,KeyError,json.JSONDecodeError) as e:return self.send(400,{'error':str(e)})
@@ -172,3 +210,4 @@ def main():
     finally:server.server_close()
     return 0
 if __name__=='__main__':sys.exit(main())
+
