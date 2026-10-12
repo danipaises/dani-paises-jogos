@@ -13,7 +13,7 @@ if (-not $python) {
 $installDir = Join-Path $env:LOCALAPPDATA 'DaniPaisesFighter'
 $archive = Join-Path $env:TEMP 'dani-fighter-local.zip'
 Invoke-WebRequest 'https://raw.githubusercontent.com/danipaises/dani-paises-jogos/main/dani-paises-fighter/local/dani-fighter-local.zip' -OutFile $archive
-if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() -ne '354168382d228c695b45b5ed58d959f66f171424f5f218d67ca72ce048c2167b') { throw 'Pacote alterado. Baixe o instalador atual e tente novamente.' }
+if ((Get-FileHash $archive -Algorithm SHA256).Hash.ToLower() -ne 'cd1816bec5014397676141e5de4103626c902da86e0433b98ead30e876af52f1') { throw 'Pacote alterado. Baixe o instalador atual e tente novamente.' }
 New-Item -ItemType Directory -Path $installDir -Force | Out-Null
 Expand-Archive $archive -DestinationPath $installDir -Force
 $runner = if ($python.Name -eq 'py.exe') { 'py -3' } else { 'python' }

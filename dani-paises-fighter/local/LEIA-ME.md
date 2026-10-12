@@ -32,7 +32,7 @@ O pacote não implementa Chromecast/Miracast. Use o espelhamento disponível no 
 - Todos os personagens estão liberados na versão local.
 - Mata-mata e liga para 2–32 participantes, com duelos por rodada. Liga: vitória 3, empate 1, derrota 0. Empates da liga são permitidos em partidas por tempo; nos outros formatos há desempate. Em igualdade de pontos, compara vitórias; se continuar igual, o painel mostra líderes empatados.
 - Jogadores aguardando continuam com os celulares no lobby. O celular de J1 escolhe a próxima partida.
-- Inputs antigos expiram em 400 ms. Desconexão de celular durante a partida pausa o jogo, e o anfitrião continua depois da reconexão.
+- Comandos usam WebSocket, enviados ao tocar/soltar e com atualização de segurança a cada 100 ms. Toques rápidos são preservados por um frame, sem fila ilimitada. Inputs antigos na tela principal expiram em 350 ms. Desconexão de celular durante a partida pausa o jogo, e o anfitrião continua depois da reconexão.
 - Torneios são guardados no navegador da tela principal enquanto a mesma sala do servidor existir. Ao recarregar a tela, a partida em andamento recomeça; resultados já registrados continuam. Reiniciar o servidor cria outra sala.
 
 ## Resolver conexão
@@ -43,3 +43,11 @@ O navegador da tela principal faz a simulação e desenho do jogo; o servidor re
 
 QR: python-qrcode 8.2 (BSD), licença incluída em vendor. Mapas: Natural Earth, domínio público.
 
+
+## Controle e atraso (0.4.2)
+
+Use o celular na horizontal. Direcional à esquerda; A ataca, X/Y pula, B usa especial e ★ usa o final. Escudo e agarrão ficam nas laterais superiores. MAIS mostra forte e gancho. O direcional escolhe a direção do golpe, sem pular ou defender acidentalmente. Jogar na vertical bloqueia o controle e solta os botões.
+
+O indicador REDE mostra o tempo de ida e volta até o servidor, sem incluir o atraso da TV. Compare a resposta no próprio celular que mostra o jogo com a resposta na TV: atraso só na TV vem do espelhamento. Internet não participa da comunicação durante as partidas.
+
+Para atualizar, pare o servidor com Ctrl+C, baixe o install.sh atual e execute-o novamente. Abra o novo endereço TELA PRINCIPAL e entre com o novo QR code; recarregue também os controles. A nova tela de controle requer o servidor 0.4.2. Não misture arquivos de versões diferentes.

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Dani Países LAN: stdlib HTTP/SSE relay; simulation runs on the host screen."""
-import argparse, io, json, mimetypes, os, secrets, socket, sys, threading, time
+import argparse, base64, hashlib, io, json, mimetypes, os, secrets, socket, struct, sys, threading, time
+from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -17,6 +18,9 @@ CHARACTERS = {'dani','br','ar','uy','py','cl','bo','pe','ec','co','ve','gy','sr'
 class Room:
     def __init__(self):
         self.lock = threading.RLock()
+        self.changed = threading.Condition(self.lock)
+        self.input_serial = 0
+        self.input_events = deque(maxlen=128)
         self.host_key = secrets.token_urlsafe(24)
         self.invite = secrets.token_urlsafe(12)
         self.players = {}
@@ -42,6 +46,21 @@ class Room:
         self.players[pid] = p
         if source=='phone' and self.organizer is None:self.organizer=pid
         return p
+    def accept_input(self, role, data):
+        if role not in self.players: raise ValueError('Controle inválido.')
+        p = self.players[role]
+        seq = int(data.get('seq', 0))
+        values = data.get('input', {})
+        if not isinstance(values, dict): raise ValueError('Comando inválido.')
+        if seq <= p['seq']: return
+        now = time.monotonic()
+        values = {k: bool(v) for k, v in values.items() if k in ACTION_KEYS}
+        if values != p['input'] or now - p['inputAt'] > .1:
+            self.input_serial += 1
+            self.input_events.append({'serial': self.input_serial, 'id': role, 'input': values, 'at': now})
+        p.update(seq=seq, input=values, seen=now, inputAt=now)
+        self.changed.notify_all()
+
     def snapshot(self, role):
         now=time.monotonic()
         public=[{k:p[k] for k in ('id','name','character','source')} | {'connected':p['source']!='phone' or now-p['seen']<5} for p in self.players.values()]
@@ -51,6 +70,7 @@ class Room:
             result['commands']=self.commands
         else:
             result['myId']=role
+            result['inputSeq']=self.players.get(role,{}).get('seq',-1)
             result['canOrganize']=role==self.organizer
             if role==self.organizer:
                 result['commandStatus']=self.command_status
@@ -61,7 +81,92 @@ ROOM = Room()
 
 class Handler(BaseHTTPRequestHandler):
     protocol_version='HTTP/1.1'
+    def setup(self):
+        super().setup()
+        self.connection.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
     def log_message(self, *args): pass
+    def websocket(self, role):
+        origin = self.headers.get('Origin')
+        if origin and urlparse(origin).netloc != self.headers.get('Host'):
+            return self.send(403, {'error': 'Origem inválida.'})
+        key = self.headers.get('Sec-WebSocket-Key', '')
+        try:
+            if len(base64.b64decode(key, validate=True)) != 16: raise ValueError()
+        except Exception: return self.send(400, {'error': 'WebSocket inválido.'})
+        if self.headers.get('Upgrade', '').lower() != 'websocket' or self.headers.get('Sec-WebSocket-Version') != '13':
+            return self.send(400, {'error': 'WebSocket necessário.'})
+        room = ROOM
+        with room.lock:
+            if role in room.players: room.players[role]['socket']=self
+        self.send_response(101)
+        self.send_header('Upgrade', 'websocket'); self.send_header('Connection', 'Upgrade')
+        self.send_header('Sec-WebSocket-Accept', base64.b64encode(hashlib.sha1((key+'258EAFA5-E914-47DA-95CA-C5AB0DC85B11').encode()).digest()).decode())
+        self.end_headers()
+        stopped = threading.Event()
+        write_lock = threading.Lock()
+        def frame(payload, opcode=1):
+            if not isinstance(payload, bytes): payload = json.dumps(payload, separators=(',', ':')).encode()
+            head = bytes([0x80 | opcode])
+            head += bytes([len(payload)]) if len(payload)<126 else b'\x7e'+struct.pack('!H',len(payload))
+            with write_lock: self.connection.sendall(head+payload)
+        def exact(n):
+            data = self.rfile.read(n)
+            if len(data)!=n: raise ConnectionError()
+            return data
+        def receive():
+            try:
+                while not stopped.is_set():
+                    h = exact(2); opcode=h[0]&15; size=h[1]&127
+                    if not h[0]&128 or h[0]&112 or not h[1]&128: raise ValueError('Frame inválido')
+                    if size==126: size=struct.unpack('!H',exact(2))[0]
+                    elif size==127: size=struct.unpack('!Q',exact(8))[0]
+                    if size>16384 or (opcode>=8 and size>125): raise ValueError('Frame muito grande')
+                    mask=exact(4); raw=exact(size); payload=bytes(v^mask[i%4] for i,v in enumerate(raw))
+                    if opcode==8: break
+                    if opcode==9: frame(payload,10); continue
+                    if opcode==10: continue
+                    if opcode!=1: raise ValueError('Frame inválido')
+                    d=json.loads(payload)
+                    if not isinstance(d,dict): raise ValueError('Pedido inválido')
+                    with room.changed:
+                        if room is not ROOM: break
+                        if role=='host': room.host_seen=time.monotonic()
+                        elif role in room.players: room.players[role]['seen']=time.monotonic()
+                        else: break
+                        if d.get('type')=='input': room.accept_input(role,d)
+                    if d.get('type')=='ping': frame({'type':'pong','at':d.get('at')})
+            except (OSError, ValueError, TypeError, ConnectionError): pass
+            finally:
+                stopped.set()
+                with room.changed: room.changed.notify_all()
+        reader=threading.Thread(target=receive,daemon=True);reader.start()
+        serial=0; last_state=0
+        try:
+            while not stopped.is_set() and room is ROOM:
+                now=time.monotonic()
+                with room.changed:
+                    if role=='host':
+                        changes=[{'id':e['id'],'input':e['input']} for e in room.input_events if e['serial']>serial and now-e['at']<.25]
+                        serial=room.input_serial
+                    else: changes=[]
+                    snapshot=room.snapshot(role) if now-last_state>=.2 else None
+                    if snapshot is not None: snapshot.pop('inputs',None); last_state=now
+                if changes: frame({'type':'inputs','changes':changes})
+                if snapshot is not None: frame({'type':'state','state':snapshot})
+                with room.changed: room.changed.wait(timeout=.016 if role=='host' else .1)
+        except OSError: pass
+        finally:
+            stopped.set()
+            with room.changed:
+                if role in room.players and room.players[role].get('socket') is self:
+                    p=room.players[role];p['input']={};p['seen']=time.monotonic()-6
+                    room.input_serial+=1
+                    room.input_events.append({'serial':room.input_serial,'id':role,'input':{},'at':time.monotonic()})
+                    room.changed.notify_all()
+            try: self.connection.shutdown(socket.SHUT_RDWR)
+            except OSError: pass
+            self.close_connection=True
+
     def send(self, code, body, content_type='application/json'):
         if not isinstance(body, bytes): body=json.dumps(body,ensure_ascii=False).encode() if content_type=='application/json' else str(body).encode()
         self.send_response(code); self.send_header('Content-Type',content_type); self.send_header('Content-Length',str(len(body)));self.send_header('Cache-Control','no-store');self.end_headers();self.wfile.write(body)
@@ -70,6 +175,9 @@ class Handler(BaseHTTPRequestHandler):
         with ROOM.lock: return ROOM.authenticate(key)
     def do_GET(self):
         u=urlparse(self.path); q=parse_qs(u.query); role=self.role(q)
+        if u.path=='/api/socket':
+            if not role:return self.send(403,{'error':'Sessão inválida.'})
+            return self.websocket(role)
         if u.path=='/api/session':
             if role!='host':return self.send(403,{'error':'Abra a tela principal pelo endereço privado mostrado no servidor.'})
             host=q.get('address',[self.server.address])[0]
@@ -122,9 +230,7 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send(200,{k:p[k] for k in ('id','token','name','character')})
                 if u.path=='/api/input':
                     if role not in ROOM.players:return self.send(403,{'error':'Controle inválido.'})
-                    p=ROOM.players[role];seq=int(d.get('seq',0))
-                    if seq>p['seq']:
-                        p['seq']=seq;p['input']={k:bool(v) for k,v in d.get('input',{}).items() if k in ACTION_KEYS};p['seen']=p['inputAt']=time.monotonic()
+                    ROOM.accept_input(role,d)
                     return self.send(200,{'ok':True})
                 if u.path=='/api/heartbeat':
                     if role=='host':ROOM.host_seen=time.monotonic()

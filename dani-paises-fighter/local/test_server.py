@@ -1,7 +1,30 @@
-import importlib.util, json, threading, time, unittest, urllib.request, urllib.error
+import base64, importlib.util, json, os, socket, struct, threading, time, unittest, urllib.request, urllib.error
 from pathlib import Path
 spec=importlib.util.spec_from_file_location('lan_server',Path(__file__).with_name('server.py'))
 module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+
+class Wire:
+    def __init__(self, server, key, origin=None):
+        self.socket=socket.create_connection(server.server_address, timeout=2)
+        self.file=self.socket.makefile('rb')
+        host='127.0.0.1:'+str(server.server_port)
+        headers=f'GET /api/socket?key={key} HTTP/1.1\r\nHost: {host}\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Version: 13\r\nSec-WebSocket-Key: '+base64.b64encode(os.urandom(16)).decode()+'\r\n'
+        if origin: headers+='Origin: '+origin+'\r\n'
+        self.socket.sendall((headers+'\r\n').encode())
+        self.status=self.file.readline()
+        while self.file.readline()!=b'\r\n': pass
+    def send(self, data):
+        data=json.dumps(data).encode();mask=os.urandom(4)
+        h=b'\x81'+(bytes([128|len(data)]) if len(data)<126 else b'\xfe'+struct.pack('!H',len(data)))
+        self.socket.sendall(h+mask+bytes(x^mask[i%4] for i,x in enumerate(data)))
+    def read(self):
+        h=self.file.read(2);size=h[1]&127
+        if size==126:size=struct.unpack('!H',self.file.read(2))[0]
+        return json.loads(self.file.read(size))
+    def close(self):
+        try:self.socket.shutdown(socket.SHUT_RDWR)
+        except OSError:pass
+        self.file.close();self.socket.close()
 
 class Tests(unittest.TestCase):
     @classmethod
@@ -66,5 +89,50 @@ class Tests(unittest.TestCase):
         self.assertTrue(module.ROOM.snapshot(p1['id'])['view']['nextEnabled'])
         self.post('/api/organize',{'key':p1['token'],'action':'next'})
         self.assertEqual(module.ROOM.snapshot('host')['commands'][0]['action'],'next')
+
+    def test_websocket_four_players_taps_latency_and_reconnect(self):
+        players=[self.post('/api/join',{'room':module.ROOM.invite,'name':str(i)}) for i in range(4)]
+        host=Wire(self.server,module.ROOM.host_key)
+        phones=[Wire(self.server,p['token']) for p in players]
+        try:
+            self.assertIn(b'101',host.status)
+            self.assertEqual(host.read()['type'],'state')
+            for phone,p in zip(phones,players):
+                initial=phone.read();self.assertEqual(initial['state']['myId'],p['id'])
+                self.assertNotIn('inputs',initial['state']);self.assertNotIn('host_key',str(initial))
+            timings=[]
+            for seq in range(1,11):
+                start=time.monotonic()
+                for phone in phones:
+                    phone.send({'type':'input','seq':seq*2,'input':{'smashAttack':True}})
+                    phone.send({'type':'input','seq':seq*2+1,'input':{}})
+                got={p['id']:[] for p in players}
+                while any(len(values)<2 for values in got.values()):
+                    packet=host.read()
+                    if packet['type']=='inputs':
+                        for change in packet['changes']:got[change['id']].append(change['input'])
+                timings.append((time.monotonic()-start)*1000)
+                for values in got.values():self.assertEqual(values[:2],[{'smashAttack':True},{}])
+            self.assertLess(max(timings),500,'LAN relay must not accumulate seconds of input delay')
+            print('WebSocket 4 players, tap down/up: median %.1f ms, max %.1f ms (loopback)'%(sorted(timings)[len(timings)//2],max(timings)))
+            phones[0].send({'type':'input','seq':100,'input':{'left':True}})
+            phones[0].send({'type':'ping','at':123})
+            while phones[0].read()['type']!='pong':pass
+            self.assertEqual(module.ROOM.players[players[0]['id']]['seq'],100)
+            phones[0].close();phones[0]=Wire(self.server,players[0]['token'])
+            state=phones[0].read()['state'];self.assertEqual(state['inputSeq'],100)
+            phones[0].send({'type':'input','seq':101,'input':{'right':True}})
+            phones[0].send({'type':'ping'})
+            while phones[0].read()['type']!='pong':pass
+            self.assertEqual(module.ROOM.players[players[0]['id']]['input'],{'right':True})
+        finally:
+            for phone in phones:phone.close()
+            host.close()
+
+    def test_websocket_rejects_invalid_auth_and_origin(self):
+        for key,origin in [('bad',None),(module.ROOM.host_key,'https://other.example')]:
+            wire=Wire(self.server,key,origin)
+            try:self.assertIn(b'403',wire.status)
+            finally:wire.close()
 
 if __name__=='__main__':unittest.main()

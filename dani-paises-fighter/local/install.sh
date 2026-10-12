@@ -18,7 +18,7 @@ python3 - <<'PY'
 import hashlib, os, pathlib, sys, tempfile, urllib.request, zipfile
 if sys.version_info<(3,10):sys.exit('Este servidor requer Python 3.10 ou mais recente.')
 url='https://raw.githubusercontent.com/danipaises/dani-paises-jogos/main/dani-paises-fighter/local/dani-fighter-local.zip'
-expected='354168382d228c695b45b5ed58d959f66f171424f5f218d67ca72ce048c2167b'
+expected='cd1816bec5014397676141e5de4103626c902da86e0433b98ead30e876af52f1'
 dest=pathlib.Path(os.environ['DP_INSTALL_DIR'])
 print('Baixando o pacote local…')
 with tempfile.TemporaryDirectory() as temp:
