@@ -30,3 +30,13 @@ Multiplayer local: dois controles, dois teclados no mesmo teclado físico, ou co
 Execute `node dani-paises-fighter/tests/regression.cjs` na raiz do repositório. A verificação cobre regras, KOs, reaparecimento, proteção, empate, pausa, timer, habilidades, bosses e campanha. Ela simula o DOM e canvas e não substitui teste em hardware.
 
 Geografia: https://www.naturalearthdata.com/downloads/110m-cultural-vectors/110m-admin-0-countries/ (domínio público).
+
+## Versão local: TV + celulares
+
+A tela inicial oferece Começar agora e Versão local. A versão local inclui sala com QR, controles por Wi-Fi, duelos, quatro jogadores em todos contra todos ou equipes, campanha em dupla, liga por pontos e mata-mata. Todos os personagens ficam liberados nela.
+
+O instalador Linux/Termux é `local/install.sh`; para Windows, `local/install-windows.ps1`. O pacote completo está em `local/dani-fighter-local.zip`. Instruções e limites: [LEIA-ME](local/LEIA-ME.md).
+
+Verificação adicional: `node dani-paises-fighter/tests/local-arena.cjs` e `python3 dani-paises-fighter/local/test_server.py`.
+
+A arena renovada é compartilhada entre a versão padrão e a local. A sala usa servidor Python e HTTP/SSE para comandos; a simulação roda na tela principal.
