@@ -15,6 +15,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "qrcode-generator": "^2.0.4",
     "ws": "^8.22.0"
   }
 }

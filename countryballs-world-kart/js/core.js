@@ -1,8 +1,8 @@
 import {CHARACTERS,TRACKS,POINTS,clamp,mod,angleDiff,random} from './data.js';
 import {Track} from './track.js';
 export class Race {
- constructor({track=0,character=0,difficulty='normal',mode='quick',seed=12345,humans=null}={}){
- this.humans=humans;this.track=new Track(TRACKS[track]);this.trackIndex=track;this.mode=mode;this.difficulty=difficulty;this.rng=random(seed);this.time=0;this.countdown=3.5;this.phase='countdown';this.events=[];this.effects=[];this.traps=[];this.projectiles=[];this.finishOrder=[];this.racers=[];this.allDone=false;
+ constructor({track=0,character=0,difficulty='normal',mode='quick',seed=12345,humans=null,laps=3,speed=1}={}){
+ this.totalLaps=Number.isInteger(laps)&&laps>=1&&laps<=10?laps:3;this.speedFactor=[.8,1,1.25].includes(speed)?speed:1;this.humans=humans;this.track=new Track(TRACKS[track]);this.trackIndex=track;this.mode=mode;this.difficulty=difficulty;this.rng=random(seed);this.time=0;this.countdown=3.5;this.phase='countdown';this.events=[];this.effects=[];this.traps=[];this.projectiles=[];this.finishOrder=[];this.racers=[];this.allDone=false;
  const ids=humans?[...humans,...CHARACTERS.map((_,i)=>i).filter(i=>!humans.includes(i))]:mode==='time'?[character]:[character,...CHARACTERS.map((_,i)=>i).filter(i=>i!==character)];
  ids.forEach((c,i)=>{let s=-10-Math.floor(i/2)*5,p=this.track.at(s,(i%2?1:-1)*2.5);this.racers.push({id:i,char:c,x:p.x,z:p.z,angle:p.angle,speed:0,y:0,vy:0,progress:s,s:p.s,index:Math.floor(p.s/this.track.step),nextGate:1,laps:0,lapStart:0,lapTimes:[],coins:0,item:null,boost:0,slow:0,stun:0,shield:0,magnet:0,invincible:0,drift:0,drifting:false,driftHeld:false,steer:0,rank:i+1,finished:false,finishTime:null,stuck:0,rampCooldown:0,aiTimer:1+this.rng()*3,lane:(i%3-1)*2,baseLane:(i%3-1)*2,trick:0,trickReady:false,respawns:0,collisionCooldown:0,safeS:s});});
  this.boxes=[];for(const f of this.track.def.items)for(const lane of [-3,0,3])this.boxes.push({...this.track.at(f*this.track.length,lane),cooldown:0});
@@ -17,7 +17,7 @@ export class Race {
  else if(!r.item){let box=this.boxes.filter(b=>b.cooldown<=0&&ahead(b)>3&&ahead(b)<24&&Math.hypot(b.x-r.x,b.z-r.z)<25).sort((a,b)=>Math.hypot(a.x-r.x,a.z-r.z)-Math.hypot(b.x-r.x,b.z-r.z))[0];if(box)wanted=this.track.nearest(box.x,box.z).lateral;}
  const trap=this.traps.find(o=>ahead(o)>0&&ahead(o)<13&&Math.hypot(o.x-r.x,o.z-r.z)<14);if(trap)wanted=((trap.x-r.x)*nearest.tz-(trap.z-r.z)*nearest.tx)>0?-3.3:3.3;
  r.lane+=(wanted-r.lane)*Math.min(1,dt*2);let look=7+Math.abs(r.speed)*.46;let target=this.track.at(nearest.s+look,r.lane);let desired=Math.atan2(target.x-r.x,target.z-r.z),error=angleDiff(desired,r.angle);let curve=Math.abs(angleDiff(this.track.at(nearest.s+23).angle,nearest.angle));let steering=clamp(error*2.3,-1,1);for(const o of this.obstacles){let d=Math.hypot(o.x-r.x,o.z-r.z);if(d<13){let side=(o.x-r.x)*nearest.tz-(o.z-r.z)*nearest.tx;steering+=side>0?-.55:.55;}}
- const ability={easy:.77,normal:.9,hard:1.0}[this.difficulty]||.9;let limit=(25.4+CHARACTERS[r.char].stats[0]*1.05)*ability/(1+curve*.50);r.aiTimer-=dt;
+ const ability={easy:.77,normal:.9,hard:1.0}[this.difficulty]||.9;let limit=(25.4+CHARACTERS[r.char].stats[0]*1.05)*this.speedFactor*ability/(1+curve*.50);r.aiTimer-=dt;
  if(r.item&&r.aiTimer<=0){const offensive=['rocket','ball','tornado'].includes(r.item);if(!offensive||this.targetAhead(r)){this.useItem(r);r.aiTimer=2+this.rng()*3;}}
  return {throttle:r.speed<limit?1:.22,brake:r.speed>limit+3?.35:0,steer:clamp(steering,-1,1),drift:curve>.32&&curve<1.2&&Math.abs(error)<.85&&r.speed>13};
  }
@@ -34,9 +34,9 @@ export class Race {
  let throttle=clamp(c.throttle||0,0,1),brake=clamp(c.brake||0,0,1),steer=clamp(c.steer||0,-1,1);r.steer+=(steer-r.steer)*Math.min(1,dt*10);
  if(r.stun>0){throttle=0;brake=.2;}
  let nearest=this.track.nearest(r.x,r.z,r.index),shortcut=this.track.shortcutAt(r.x,r.z),off=nearest.distance>this.track.width*.5;
- let max=(25.4+stats[0]*1.05)*(1+r.coins*.006)*(r.slow>0?.56:1)*(off?(shortcut?.82:.55):1);
+ let max=(25.4+stats[0]*1.05)*this.speedFactor*(1+r.coins*.006)*(r.slow>0?.56:1)*(off?(shortcut?.82:.55):1);
  if(r.boost>0)max*=1.38;
- const acceleration=8.8+stats[1]*1.3+(CHARACTERS[r.char].id==='pl'&&r.speed<10?1:0);
+ const acceleration=this.speedFactor*(8.8+stats[1]*1.3+(CHARACTERS[r.char].id==='pl'&&r.speed<10?1:0));
  if(brake>.05)r.speed-=brake*(r.speed>0?25:acceleration*.45)*dt;else if(throttle>.01)r.speed+=acceleration*throttle*dt;else r.speed*=Math.exp(-.65*dt);
  if(r.speed>max)r.speed+=(max-r.speed)*Math.min(1,dt*4);r.speed=clamp(r.speed,-8,max+3);
  let was=r.driftHeld;r.driftHeld=!!c.drift;
@@ -46,7 +46,7 @@ export class Race {
  if(r.drifting)r.drift+=dt*(.8+stats[4]*.15);else if(!c.drift&&was){if(r.drift>.6){r.boost=Math.max(r.boost,Math.min(2.5,.7+r.drift*.5)+(r.char===7?.25:0));this.emit('driftboost',r);}r.drift=0;}
  if(!c.drift&&!was)r.drift=0;
  let turn=(1.3+stats[2]*.085)*Math.min(1,Math.abs(r.speed)/9)*(r.speed<0?-1:1)*(r.drifting?1.33:1);
- r.angle+=r.steer*turn*dt;
+ r.angle+=r.steer*turn*Math.sqrt(this.speedFactor)*dt;
  let slip=r.drifting?-r.steer*.16:0;
  r.x+=Math.sin(r.angle+slip)*r.speed*dt;r.z+=Math.cos(r.angle+slip)*r.speed*dt;
  if(r.y>0||r.vy>0){r.vy-=15*dt;r.y+=r.vy*dt;if(r.y<0){r.y=0;r.vy=0;if(r.trickReady){r.boost=Math.max(r.boost,.8);r.trickReady=false;r.trick=0;this.emit('driftboost',r);}this.emit('land',r);}}
@@ -57,7 +57,7 @@ export class Race {
  if(Math.abs(ds)<Math.max(7,Math.abs(r.speed)*dt*5)&&nearest.distance<this.track.width+15){r.progress+=ds;}
  r.s=nearest.s;r.index=nearest.index;
  const gateStep=this.track.length/16;
- if(r.progress>=r.nextGate*gateStep){let gate=this.track.at(r.nextGate*gateStep);if(Math.hypot(gate.x-r.x,gate.z-r.z)<this.track.width+15){r.nextGate++;if((r.nextGate-1)%16===0){r.laps++;r.lapTimes.push(this.time-r.lapStart);r.lapStart=this.time;this.emit('lap',r);if(r.laps===3){r.finished=true;r.finishTime=this.time;this.finishOrder.push(r.id);this.emit('finish',r);}}}}
+ if(r.progress>=r.nextGate*gateStep){let gate=this.track.at(r.nextGate*gateStep);if(Math.hypot(gate.x-r.x,gate.z-r.z)<this.track.width+15){r.nextGate++;if((r.nextGate-1)%16===0){r.laps++;r.lapTimes.push(this.time-r.lapStart);r.lapStart=this.time;this.emit('lap',r);if(r.laps===this.totalLaps){r.finished=true;r.finishTime=this.time;this.finishOrder.push(r.id);this.emit('finish',r);}}}}
  if(nearest.distance<this.track.width*.5&&ds>0)r.safeS=r.progress;
  if(r.speed<2&&throttle>.5)r.stuck+=dt;else r.stuck=0;
  if(nearest.distance>42||r.stuck>4){this.respawn(r);}

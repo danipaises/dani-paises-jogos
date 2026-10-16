@@ -10,11 +10,15 @@ Teclado: WASD/setas, Espaço para salto/drift, E para item, Escape para pausa. C
 
 ## Modo local — TV e até oito celulares
 
+O botão **Modo local** abre uma página com duas opções: entrar em uma sala escaneando o QR da TV, ou criar uma sala com comandos copiáveis para Termux e Ubuntu. Um celular Android com Termux pode hospedar; não é obrigatório ter PC. O navegador não executa os comandos sozinho.
+
+Na Copa, a ordem é Rio → Paris → Times Square; as voltas e a velocidade escolhidas valem para todas as etapas. Na corrida rápida, o mestre escolhe uma das três pistas.
+
 1. Baixe o repositório e abra esta pasta em um computador com Node.js 22 ou mais recente. No Termux: `pkg install nodejs`.
 2. Execute `npm ci`, depois `npm start`. No Windows também pode executar `iniciar-local.bat`; Linux/Termux: `sh iniciar-local.sh`.
 3. O terminal mostra o link reservado à **TV**, com `?host=...`. Abra-o no navegador do computador ligado à TV, ou no aparelho cuja tela será espelhada. Para exibir o link correto dos celulares, use o endereço com o IP da rede, não `localhost`.
-4. Todos os celulares devem estar na mesma rede Wi-Fi. Cada um abre o endereço `?room=...` mostrado na TV, informa o nome e escolhe um país livre.
-5. O primeiro celular é o jogador 1: escolhe pista, dificuldade e corrida rápida/Copa; inicia, pausa, avança as etapas e volta à sala. A TV mostra a corrida em tela dividida, uma câmera por pessoa. As vagas restantes são preenchidas por IA, até oito corredores no total.
+4. Todos os celulares devem estar na mesma rede Wi-Fi. Cada um escaneia com a câmera o QR code da TV (ou abre o endereço `?room=...`), informa o nome e escolhe um país livre. O QR é gerado localmente, sem serviços externos. Se o servidor não detectar o IP, a tela da TV permite informar o IPv4 Wi-Fi para gerar o código.
+5. O primeiro celular é o jogador 1 e mestre da sala: escolhe pista, dificuldade, corrida rápida/Copa, de 1 a 10 voltas e velocidade tranquila (80%), normal (100%) ou turbo (125%); inicia, pausa, avança as etapas e volta à sala. A TV mostra a corrida em tela dividida, uma câmera por pessoa. As vagas restantes são preenchidas por IA, até oito corredores no total.
 6. Na TV, clique uma vez em “Ativar som e tela cheia” para liberar áudio. Durante a corrida, não há menu de configuração sobre a pista.
 
 Se o IP não puder ser detectado automaticamente (pode acontecer no Android), consulte o endereço IPv4 nas informações da rede Wi-Fi do aparelho e substitua `localhost` por ele no link da TV. Permita a porta 8080 no firewall da rede local. Redes de convidados com isolamento entre dispositivos impedem a conexão. HDMI evita o atraso adicional do espelhamento sem fio.
@@ -46,7 +50,7 @@ Voltar à sala mantém os participantes. Para zerar vagas e trocar o jogador 1, 
 - `js/app.js`: experiência individual original.
 - `js/local.js`, `local.html`, `local.css`: sala, TV, celulares, Copa local e reconexão.
 - `server.mjs`: arquivos HTTP/HTTPS e relay WebSocket autenticado. A simulação roda na TV; o servidor encaminha entradas.
-- `vendor/`: Three.js incluído e sua licença. `ws` é a única dependência do servidor, instalada por `npm ci`.
+- `vendor/`: Three.js incluído e sua licença. `ws` fornece o WebSocket; `qrcode-generator` é incluído localmente em `vendor/qrcode.js` para gerar QR na TV. As dependências são instaladas por `npm ci`.
 
 ## Verificação e limites
 
