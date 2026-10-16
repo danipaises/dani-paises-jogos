@@ -1,4 +1,4 @@
-const VERSION='cwk-v1.2.1';
+const VERSION='cwk-v1.2.2';
 const BASE=new URL('./',self.location.href);
 const FILES=['./','local.html','local.css','js/local.js','index.html','style.css','manifest.webmanifest','js/app.js','js/data.js','js/track.js','js/core.js','js/render.js','js/input.js','js/audio.js','js/storage.js','vendor/qrcode.js','vendor/three.module.js','vendor/three.core.js','vendor/BufferGeometryUtils.js','assets/rio.svg','assets/paris.svg','assets/nyc.svg','assets/icon.svg','assets/icon-192.png','assets/icon-512.png'].map(p=>new URL(p,BASE).href);
 // A redirected precache response cannot be reused for a manual-redirect navigation.

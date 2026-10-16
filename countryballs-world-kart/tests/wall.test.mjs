@@ -1,0 +1,7 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {Race} from '../js/core.js';
+function place(race,side,angle){const r=race.racers[0],s=race.track.length*.12,p=race.track.at(s,side*(race.track.width*.5+5.6));Object.assign(r,{x:p.x,z:p.z,s:p.s,index:Math.floor(s/race.track.step),progress:s,angle:p.angle+side*angle,speed:22});race.phase='racing';return r;}
+for(const track of [0,1,2])for(const side of [-1,1])test(`track ${track} side ${side}: wall scrape slides and accelerates away`,()=>{const race=new Race({track,mode:'time'}),r=place(race,side,.35);let min=Infinity,hits=0;for(let n=0;n<240;n++){race.update(1/60,{throttle:1});min=Math.min(min,r.speed);hits+=race.events.filter(e=>e.type==='collision').length;}assert.ok(min>8,`scrape dropped to ${min}`);assert.ok(r.speed>10,`exit speed ${r.speed}`);assert.ok(hits<12,`repeated impacts ${hits}`);assert.equal(r.respawns,0);});
+test('head-on contact lets a held accelerator recover along the wall',()=>{const race=new Race({mode:'time'}),r=place(race,1,Math.PI/2),start=r.progress;for(let n=0;n<300;n++)race.update(1/60,{throttle:1});assert.ok(r.progress>start+20,`progress ${r.progress-start}`);assert.ok(r.speed>10);assert.equal(r.respawns,0);});
+test('reverse and steering away from a wall remain usable',()=>{const race=new Race({mode:'time'}),r=place(race,1,Math.PI/2);r.speed=-6;for(let n=0;n<35;n++)race.update(1/60,{brake:1});assert.ok(r.speed<0);assert.ok(race.track.nearest(r.x,r.z).distance<race.track.width*.5+5);});

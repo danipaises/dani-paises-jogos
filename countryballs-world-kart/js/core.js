@@ -4,7 +4,7 @@ export class Race {
  constructor({track=0,character=0,difficulty='normal',mode='quick',seed=12345,humans=null,laps=3,speed=1}={}){
  this.totalLaps=Number.isInteger(laps)&&laps>=1&&laps<=10?laps:3;this.speedFactor=[.8,1,1.25].includes(speed)?speed:1;this.humans=humans;this.track=new Track(TRACKS[track]);this.trackIndex=track;this.mode=mode;this.difficulty=difficulty;this.rng=random(seed);this.time=0;this.countdown=3.5;this.phase='countdown';this.events=[];this.effects=[];this.traps=[];this.projectiles=[];this.finishOrder=[];this.racers=[];this.allDone=false;
  const ids=humans?[...humans,...CHARACTERS.map((_,i)=>i).filter(i=>!humans.includes(i))]:mode==='time'?[character]:[character,...CHARACTERS.map((_,i)=>i).filter(i=>i!==character)];
- ids.forEach((c,i)=>{let s=-10-Math.floor(i/2)*5,p=this.track.at(s,(i%2?1:-1)*2.5);this.racers.push({id:i,char:c,x:p.x,z:p.z,angle:p.angle,speed:0,y:0,vy:0,progress:s,s:p.s,index:Math.floor(p.s/this.track.step),nextGate:1,laps:0,lapStart:0,lapTimes:[],coins:0,item:null,boost:0,slow:0,stun:0,shield:0,magnet:0,invincible:0,drift:0,drifting:false,driftHeld:false,steer:0,rank:i+1,finished:false,finishTime:null,stuck:0,rampCooldown:0,aiTimer:1+this.rng()*3,lane:(i%3-1)*2,baseLane:(i%3-1)*2,trick:0,trickReady:false,respawns:0,collisionCooldown:0,safeS:s});});
+ ids.forEach((c,i)=>{let s=-10-Math.floor(i/2)*5,p=this.track.at(s,(i%2?1:-1)*2.5);this.racers.push({id:i,char:c,x:p.x,z:p.z,angle:p.angle,speed:0,y:0,vy:0,progress:s,s:p.s,index:Math.floor(p.s/this.track.step),nextGate:1,laps:0,lapStart:0,lapTimes:[],coins:0,item:null,boost:0,slow:0,stun:0,shield:0,magnet:0,invincible:0,drift:0,drifting:false,driftHeld:false,steer:0,rank:i+1,finished:false,finishTime:null,stuck:0,rampCooldown:0,aiTimer:1+this.rng()*3,lane:(i%3-1)*2,baseLane:(i%3-1)*2,trick:0,trickReady:false,respawns:0,collisionCooldown:0,wallContact:0,safeS:s});});
  this.boxes=[];for(const f of this.track.def.items)for(const lane of [-3,0,3])this.boxes.push({...this.track.at(f*this.track.length,lane),cooldown:0});
  this.coins=[];for(let i=1;i<42;i++){let s=i/42*this.track.length;this.coins.push({...this.track.at(s,Math.sin(i*.8)*3),cooldown:0});}
  this.obstacles=track===2?[.36,.64].map((s,i)=>({...this.track.at(s*this.track.length),baseS:s*this.track.length,phase:i*2,radius:1.8})):[];
@@ -30,7 +30,7 @@ export class Race {
  this.collisions();this.updateItems(dt);this.rank();
  if(this.finishOrder.length===this.racers.length){this.phase='done';this.allDone=true;this.emit('complete',this.racers[0]);}
  }
- stepRacer(r,c,dt){const stats=CHARACTERS[r.char].stats;for(const key of ['boost','slow','stun','shield','magnet','invincible','rampCooldown','collisionCooldown'])r[key]=Math.max(0,r[key]-dt);
+ stepRacer(r,c,dt){const stats=CHARACTERS[r.char].stats;for(const key of ['boost','slow','stun','shield','magnet','invincible','rampCooldown','collisionCooldown','wallContact'])r[key]=Math.max(0,r[key]-dt);
  let throttle=clamp(c.throttle||0,0,1),brake=clamp(c.brake||0,0,1),steer=clamp(c.steer||0,-1,1);r.steer+=(steer-r.steer)*Math.min(1,dt*10);
  if(r.stun>0){throttle=0;brake=.2;}
  let nearest=this.track.nearest(r.x,r.z,r.index),shortcut=this.track.shortcutAt(r.x,r.z),off=nearest.distance>this.track.width*.5;
@@ -52,7 +52,19 @@ export class Race {
  if(r.y>0||r.vy>0){r.vy-=15*dt;r.y+=r.vy*dt;if(r.y<0){r.y=0;r.vy=0;if(r.trickReady){r.boost=Math.max(r.boost,.8);r.trickReady=false;r.trick=0;this.emit('driftboost',r);}this.emit('land',r);}}
  nearest=this.track.nearest(r.x,r.z,r.index);shortcut=this.track.shortcutAt(r.x,r.z);
  const boundary=this.track.width*.5+5.5;
- if(nearest.distance>boundary&&!shortcut){const excess=nearest.distance-boundary;r.x-=nearest.tz*Math.sign(nearest.lateral)*excess;r.z+=nearest.tx*Math.sign(nearest.lateral)*excess;r.speed*=.86;if(r.collisionCooldown<=0){this.emit('collision',r);if(Math.abs(r.speed)>18)r.coins=Math.max(0,r.coins-1);r.collisionCooldown=.5;}}
+ if(nearest.distance>boundary&&!shortcut){
+ const side=Math.sign(nearest.lateral)||1,nx=nearest.tz*side,nz=-nearest.tx*side,excess=nearest.distance-boundary+.08;
+ r.x-=nx*excess;r.z-=nz*excess;
+ const outward=(Math.sin(r.angle)*nx+Math.cos(r.angle)*nz)*(r.speed<0?-1:1);
+ if(outward>0){
+  // One loss per impact, rather than exponential braking every physics tick.
+  if(r.wallContact<=0){const impact=Math.abs(r.speed)*outward;r.speed*=1-.32*outward;if(impact>7){this.emit('collision',r);if(impact>18)r.coins=Math.max(0,r.coins-1);}}
+  const tangent=nearest.angle+(Math.cos(r.angle-nearest.angle)<0?Math.PI:0);
+  r.angle+=angleDiff(tangent,r.angle)*Math.min(1,dt*8);
+ }
+ r.wallContact=.35;
+ nearest=this.track.nearest(r.x,r.z,r.index);
+ }
  let ds=nearest.s-r.s;if(ds>this.track.length/2)ds-=this.track.length;if(ds<-this.track.length/2)ds+=this.track.length;
  if(Math.abs(ds)<Math.max(7,Math.abs(r.speed)*dt*5)&&nearest.distance<this.track.width+15){r.progress+=ds;}
  r.s=nearest.s;r.index=nearest.index;
