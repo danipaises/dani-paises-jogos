@@ -1,0 +1,8 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readFileSync,existsSync,readdirSync} from 'node:fs';
+import {resolve,dirname} from 'node:path';
+const root=new URL('../',import.meta.url);
+test('all local module dependencies, CSS, images and icons exist',()=>{const js=readdirSync(new URL('js/',root));for(const file of js){let path=new URL('js/'+file,root);let text=readFileSync(path,'utf8');for(const m of text.matchAll(/from\s+['"]([^'"]+)['"]/g))assert.ok(existsSync(new URL(m[1],path)),`${file}: ${m[1]}`);}let html=readFileSync(new URL('index.html',root),'utf8');for(const m of html.matchAll(/(?:src|href)="([^"#]+)"/g))assert.ok(existsSync(new URL(m[1],root)),m[1]);});
+test('PWA has valid icons, landscape display and caches every application module',()=>{const manifest=JSON.parse(readFileSync(new URL('manifest.webmanifest',root),'utf8'));assert.equal(manifest.display,'standalone');assert.equal(manifest.orientation,'landscape');for(const icon of manifest.icons)assert.ok(existsSync(new URL(icon.src,root)));const sw=readFileSync(new URL('sw.js',root),'utf8');for(const file of readdirSync(new URL('js/',root)))assert.ok(sw.includes('js/'+file));for(const m of sw.matchAll(/'((?:assets|vendor|js)\/[^']+)'/g))assert.ok(existsSync(new URL(m[1],root)));assert.ok(sw.includes('c.addAll'));});
+test('every static UI selector in app references a real element',()=>{let app=readFileSync(new URL('js/app.js',root),'utf8');let html=readFileSync(new URL('index.html',root),'utf8')+app;for(const m of app.matchAll(/\$\('#([\w-]+)'\)/g)){assert.ok(html.includes('id="'+m[1]+'"')||html.includes('id=\\"'+m[1]+'\\"'),m[1]);}});

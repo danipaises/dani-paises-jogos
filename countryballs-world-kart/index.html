@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#112b32"><meta name="description" content="O mundo é sua pista. Oito Countryballs, três cidades, uma Copa Mundial. Kart 3D com teclado, toque e controle."><meta name="apple-mobile-web-app-capable" content="yes"><title>Countryballs World Kart — Copa Mundial</title>
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="assets/icon-192.png"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="style.css">
+<script type="importmap">{"imports":{"three":"./vendor/three.module.js"}}</script>
+</head>
+<body>
+<canvas id="world" aria-label="Pista de corrida tridimensional"></canvas>
+<div id="loading"><div class="loading-ball">🌍</div><strong>PREPARANDO O MUNDO</strong><span>Ligando os motores…</span></div>
+<div id="error" hidden><h1>Não foi possível ligar o motor 3D.</h1><p id="errorText">Abra em um navegador com WebGL 2 habilitado.</p><button onclick="location.reload()">Tentar novamente</button></div>
+<div id="menu" class="menu">
+ <header class="topbar"><a class="brand" href="#" aria-label="Countryballs World Kart — início"><svg viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="16" fill="#b7f56b"/><ellipse cx="24" cy="24" rx="21" ry="8" fill="none" stroke="white" stroke-width="2.4" transform="rotate(-25 24 24)"/><path d="M19 17l4 4-3 6 4 7M28 10l-2 8 6 5 6-1" fill="none" stroke="#204642" stroke-width="3"/></svg><span>COUNTRYBALLS<b>WORLD KART</b></span></a><div class="top-actions"><span class="season"><i></i> COPA MUNDIAL</span><button id="install" class="icon-button" hidden title="Instalar jogo" aria-label="Instalar jogo">↓</button><button id="open-help" class="icon-button" aria-label="Como jogar">?</button><button id="open-settings" class="icon-button" aria-label="Configurações">⚙</button></div></header>
+ <main class="home-main">
+  <div class="hero-copy"><div class="eyebrow"><span>01 — 03</span> TRÊS CIDADES. UM CAMPEÃO.</div><h1>O MUNDO É<br>SUA <em>PISTA.</em></h1><p class="intro">Acelere sem fronteiras.<br>Escolha seu país. Conquiste a Copa.</p>
+   <p><a href="local.html" style="color:#b7f56b;font-weight:bold">📺 Modo local • até 8 jogadores →</a></p><div class="mode-tabs" role="group" aria-label="Modo de jogo"><button class="selected" data-mode="gp">♜ Grande Prêmio</button><button data-mode="quick">Corrida Rápida</button><button data-mode="time">Contra o Tempo</button></div>
+   <div class="driver-label"><span>SEU PILOTO</span><button id="character-info">Ver atributos ↗</button></div><div id="characters" class="characters" aria-label="Seleção de personagens"></div>
+   <div class="start-row"><button id="start" class="primary">VAMOS CORRER <span>↗</span></button><label class="difficulty-label"><span>DIFICULDADE</span><select id="difficulty" aria-label="Dificuldade"><option value="easy">Fácil</option><option value="normal" selected>Normal</option><option value="hard">Difícil</option></select></label></div>
+   <div class="input-hints"><span>⌨ Teclado</span><span>⌘ Controle</span><span>◉ Touch</span><span class="offline-hint">• Sem fronteiras. Sem login no jogo.</span></div>
+  </div>
+  <aside class="driver-tag"><span class="driver-tag-top">PRONTO PARA A LARGADA</span><div><b id="selected-name">Brasil</b><span class="number">01</span></div><p id="selected-desc">Equilíbrio para explorar o mundo.</p><div class="mini-stats"><span>VELOCIDADE <b id="speed-bars">●●●○○</b></span><span>CONTROLE <b id="handling-bars">●●●○○</b></span></div></aside>
+ </main>
+ <section class="destinations"><div class="section-top"><h2 id="track-section-title">SEU PASSAPORTE PARA A VITÓRIA</h2><span id="mode-caption">3 CORRIDAS · 3 VOLTAS · 8 PILOTOS</span></div><div id="tracks" class="tracks"></div></section>
+ <footer class="home-footer"><span>FEITO PARA QUEM NASCEU PARA CORRER.</span><button id="records-button">Recordes & conquistas ↗</button><span>WORLD KART / 1.0</span></footer>
+</div>
+<div id="hud" hidden>
+ <div class="race-top-left"><div class="position"><b id="position">8</b><span>º <small id="racers-total">/ 8</small></span></div><div class="lap-chip"><span>VOLTA</span><b id="lap">1 <small>/ 3</small></b></div></div>
+ <div class="race-time"><span id="race-city">RIO DE JANEIRO</span><b id="time">0:00.000</b><small id="best-lap">MELHOR VOLTA —</small></div>
+ <div class="race-top-right"><button id="hud-pause" class="icon-button" aria-label="Pausar">Ⅱ</button><div id="item-slot" class="item-slot"><span id="item-icon">?</span><small id="item-name">PEGUE UM ITEM</small><kbd>E</kbd></div></div>
+ <div class="map-panel"><canvas id="minimap" width="180" height="155" aria-label="Minimapa da corrida"></canvas><span id="race-name">COPA TROPICAL</span></div>
+ <div class="speed-panel"><div class="coin-count"><span>●</span> <b id="coins">00</b><small>/10</small></div><div class="speed"><b id="speed">0</b><span>KM/H</span></div><div class="speed-meter"><i id="speed-bar"></i></div></div>
+ <div id="race-notice" class="race-notice"></div><div id="countdown" class="countdown"></div><div id="drift-meter" class="drift-meter" hidden><span>MINI-TURBO</span><div><i></i></div></div>
+ <div id="spectating" hidden>BANDEIRADA! <span>Aguardando os outros corredores…</span></div>
+</div>
+<div id="touch-controls" hidden>
+ <button data-touch="left" class="touch t-left" aria-label="Virar à esquerda">◀</button><button data-touch="right" class="touch t-right" aria-label="Virar à direita">▶</button>
+ <button data-touch="throttle" class="touch t-throttle" aria-label="Acelerar"><span>↑</span><small>ACELERAR</small></button><button data-touch="brake" class="touch t-brake" aria-label="Frear e dar ré">↓<small>FREIO</small></button><button data-touch="drift" class="touch t-drift" aria-label="Drift e salto">↝<small>DRIFT</small></button><button data-touch="item" class="touch t-item" aria-label="Usar item">✦<small>ITEM</small></button><button data-touch="pause" class="touch t-pause" aria-label="Pausar">Ⅱ</button>
+</div>
+<div id="layout-editor" hidden><div><b>SEU CONTROLE, DO SEU JEITO</b><p>Arraste os botões para reposicionar. Ajuste o tamanho nas configurações.</p><button id="layout-reset" class="secondary">Restaurar posições</button><button id="layout-done" class="primary">Salvar posição ✓</button></div></div>
+<div id="modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="modal-title"><div class="modal-card"><button id="modal-close" class="close" aria-label="Fechar">×</button><div id="modal-content"></div></div></div>
+<div id="rotate-hint">↻ Vire o celular para uma pista mais ampla.</div><div id="toast" role="status"></div>
+<noscript>Ative o JavaScript para jogar Countryballs World Kart.</noscript>
+<script type="module" src="js/app.js"></script>
+</body></html>

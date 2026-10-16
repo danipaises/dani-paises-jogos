@@ -1,0 +1,6 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {readSave,writeSave,recordRace} from '../js/storage.js';
+import {Race} from '../js/core.js';
+test('settings, local records and achievements persist and use minimum times',()=>{let data={};globalThis.localStorage={getItem:k=>data[k]||null,setItem:(k,v)=>data[k]=v};let s=readSave();s.character=5;s.settings.opacity=.45;s.settings.layout.left=[.15,.8];assert.ok(writeSave(s));let t=readSave();assert.equal(t.character,5);assert.equal(t.settings.opacity,.45);assert.deepEqual(t.settings.layout.left,[.15,.8]);const r=new Race({mode:'time'}),p=r.racers[0];Object.assign(p,{finished:true,finishTime:90,lapTimes:[30,29,31],coins:10});let awards=recordRace(t,r);assert.ok(awards.includes('Primeira bandeirada'));assert.equal(t.records['rio-time'].bestLap,29);Object.assign(p,{finishTime:95,lapTimes:[31,32,32]});recordRace(t,r);assert.equal(t.records['rio-time'].bestRace,90);assert.equal(t.completed.length,1);writeSave(t);assert.equal(readSave().records['rio-time'].bestLap,29);});
+test('missing or corrupt storage starts safely; quota errors are reported',()=>{globalThis.localStorage={getItem:()=>'{broken',setItem:()=>{throw new Error('Quota');}};assert.equal(readSave().character,0);assert.equal(writeSave(readSave()),false);});
